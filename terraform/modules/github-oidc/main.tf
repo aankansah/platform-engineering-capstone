@@ -51,7 +51,7 @@ resource "aws_iam_role" "github_actions" {
 
 # In a real company you would create a least-privilege custom policy.
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
-  role       = aws_iam_role.github_actions.name
+  role = aws_iam_role.github_actions.name
   # Todo: Update to least-privilege permission
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

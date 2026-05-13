@@ -1,90 +1,92 @@
-# terraform/modules/github-oidc/main.tf
 
-variable "github_org" {
-  description = "Your GitHub username or organization name"
-  type        = string
-}
-
-variable "github_repo" {
-  description = "Repository name"
-  type        = string
-}
-
-variable "allowed_branches" {
-  description = "Branches allowed to assume AWS roles"
-  type        = list(string)
-  default     = ["main", "develop", "staging"]
-}
-
-variable "project_name" {
-  type    = string
-  default = "capstone"
-}
-
-# Register GitHub as an OIDC Identity Provider in AWS
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = ["sts.amazonaws.com"]
-
-  # GitHub's OIDC thumbprint (stable — rarely changes)
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-
-  tags = {
-    Name    = "GitHub Actions OIDC Provider"
-    Project = var.project_name
-  }
-}
-
-# Local helper: build the list of allowed repo:branch subjects
 locals {
-  allowed_subjects = [
-    for branch in var.allowed_branches :
-    "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${branch}"
-  ]
+  cluster_name = "${var.project_name}-${var.environment}"
 }
 
-# IAM Role that GitHub Actions workflows will assume
-resource "aws_iam_role" "github_actions" {
-  name = "${var.project_name}-github-actions-role"
+data "aws_partition" "current" {}
+
+resource "aws_iam_role" "ebs_csi" {
+  name = "${local.cluster_name}-ebs-csi"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.github.arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
         }
-        StringLike = {
-          "token.actions.githubusercontent.com:sub" = local.allowed_subjects
-        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
       }
-    }]
+    ]
   })
+}
 
-  tags = {
-    Purpose = "GitHub Actions CI/CD"
-    Project = var.project_name
+resource "aws_iam_role_policy_attachment" "ebs_csi" {
+  role       = aws_iam_role.ebs_csi.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.20.0"
+
+  name               = local.cluster_name
+  kubernetes_version = var.cluster_version
+
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+
+  # Allow kubectl access from within the cluster (required for Helm deploys from CI)
+  endpoint_public_access = true
+
+  enable_cluster_creator_admin_permissions = true
+
+  # Add-ons: managed by AWS, auto-updated
+  addons = {
+    coredns                = {}
+    eks-pod-identity-agent = { before_compute = true }
+    kube-proxy             = {}
+    vpc-cni                = { before_compute = true }
+    aws-ebs-csi-driver = {
+      most_recent = true
+      pod_identity_association = [{
+        role_arn        = aws_iam_role.ebs_csi.arn
+        service_account = "ebs-csi-controller-sa"
+      }]
+      timeouts = {
+        create = "40m"
+        update = "40m"
+      }
+    } # Required for PersistentVolumes
   }
-}
 
-# For this portfolio project, we use broad permissions.
-# In a real company you would create a least-privilege custom policy.
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
+  eks_managed_node_groups = {
+    primary = {
+      instance_types = [var.instance_type]
 
-output "role_arn" {
-  value       = aws_iam_role.github_actions.arn
-  description = "Paste this ARN into GitHub Actions workflows as role-to-assume"
-}
+      min_size     = var.min_nodes
+      max_size     = var.max_nodes
+      desired_size = var.node_count
 
-output "oidc_provider_arn" {
-  value = aws_iam_openid_connect_provider.github.arn
+      labels = {
+        Environment = var.environment
+        NodeGroup   = "primary"
+      }
+
+      tags = {
+        "k8s.io/cluster-autoscaler/enabled"                                = "true"
+        "k8s.io/cluster-autoscaler/${var.project_name}-${var.environment}" = "owned"
+      }
+    }
+  }
+
+  # tags = {
+  #   Environment = var.environment
+  #   Project     = var.project_name
+  #   ManagedBy   = "Terraform"
+  # }
 }
