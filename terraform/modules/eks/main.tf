@@ -1,33 +1,5 @@
-
 locals {
   cluster_name = "${var.project_name}-${var.environment}"
-}
-
-data "aws_partition" "current" {}
-
-resource "aws_iam_role" "ebs_csi" {
-  name = "${local.cluster_name}-ebs-csi"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = [
-          "sts:AssumeRole",
-          "sts:TagSession"
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ebs_csi" {
-  role       = aws_iam_role.ebs_csi.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
 module "eks" {
@@ -51,17 +23,14 @@ module "eks" {
     eks-pod-identity-agent = { before_compute = true }
     kube-proxy             = {}
     vpc-cni                = { before_compute = true }
-    aws-ebs-csi-driver = {
-      most_recent = true
-      pod_identity_association = [{
-        role_arn        = aws_iam_role.ebs_csi.arn
-        service_account = "ebs-csi-controller-sa"
-      }]
-      timeouts = {
-        create = "40m"
-        update = "40m"
-      }
-    } # Required for PersistentVolumes
+    # Uncomment when Kubernetes workloads need EBS-backed PersistentVolumes.
+    # aws-ebs-csi-driver = {
+    #   most_recent = true
+    #   timeouts = {
+    #     create = "40m"
+    #     update = "40m"
+    #   }
+    # }
   }
 
   eks_managed_node_groups = {
@@ -84,9 +53,16 @@ module "eks" {
     }
   }
 
-  # tags = {
-  #   Environment = var.environment
-  #   Project     = var.project_name
-  #   ManagedBy   = "Terraform"
-  # }
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_eks_pod_identity_association" "cluster_autoscaler" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "kube-system"
+  service_account = "cluster-autoscaler"
+  role_arn        = var.cluster_autoscaler_role_arn
 }
