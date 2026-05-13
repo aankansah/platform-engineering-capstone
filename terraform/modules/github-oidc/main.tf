@@ -1,33 +1,9 @@
-# terraform/modules/github-oidc/main.tf
-
-variable "github_org" {
-  description = "Your GitHub username or organization name"
-  type        = string
-}
-
-variable "github_repo" {
-  description = "Repository name"
-  type        = string
-}
-
-variable "allowed_branches" {
-  description = "Branches allowed to assume AWS roles"
-  type        = list(string)
-  default     = ["main", "develop", "staging"]
-}
-
-variable "project_name" {
-  type    = string
-  default = "capstone"
-}
-
-# Register GitHub as an OIDC Identity Provider in AWS
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 
   client_id_list = ["sts.amazonaws.com"]
 
-  # GitHub's OIDC thumbprint (stable — rarely changes)
+  # GitHub's OIDC thumbprint
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 
   tags = {
@@ -36,7 +12,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
-# Local helper: build the list of allowed repo:branch subjects
+# List of allowed repo:branch subjects
 locals {
   allowed_subjects = [
     for branch in var.allowed_branches :
@@ -73,18 +49,9 @@ resource "aws_iam_role" "github_actions" {
   }
 }
 
-# For this portfolio project, we use broad permissions.
 # In a real company you would create a least-privilege custom policy.
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
   role       = aws_iam_role.github_actions.name
+  # Todo: Update to least-privilege permission
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-output "role_arn" {
-  value       = aws_iam_role.github_actions.arn
-  description = "Paste this ARN into GitHub Actions workflows as role-to-assume"
-}
-
-output "oidc_provider_arn" {
-  value = aws_iam_openid_connect_provider.github.arn
 }

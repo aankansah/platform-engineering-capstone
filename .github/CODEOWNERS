@@ -1,0 +1,8 @@
+# Production changes require two senior engineer approvals
+/terraform/environments/production/  @aankansah
+
+# Staging requires one approval
+/terraform/environments/staging/     @aankansah
+
+# Services require review
+/services/                           @aankansah
