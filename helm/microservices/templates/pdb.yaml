@@ -1,0 +1,22 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- $services := dict
+  "javascript-api" .Values.javascriptApi
+  "java-service" .Values.javaService
+  "rust-processor" .Values.rustProcessor
+-}}
+
+{{- range $name, $config := $services }}
+{{- if $config.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}-pdb
+spec:
+  minAvailable: 2 # Always keep at least 2 pods during node drain
+  selector:
+    matchLabels:
+      app: {{ $name }}
+{{- end }}
+{{- end }}
+{{- end }}

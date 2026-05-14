@@ -1,0 +1,101 @@
+{{- $services := dict
+  "javascript-api" .Values.javascriptApi
+  "java-service" .Values.javaService
+  "rust-processor" .Values.rustProcessor
+-}}
+
+{{- range $name, $config := $services }}
+{{- if $config.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    environment: {{ $.Values.global.environment }}
+spec:
+  {{- if not $config.autoscaling.enabled }}
+  replicas: {{ $config.replicaCount }}
+  {{- end }}
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # Zero downtime rolling updates
+
+  selector:
+    matchLabels:
+      app: {{ $name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        environment: {{ $.Values.global.environment }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ $config.service.targetPort }}"
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: {{ $name }}
+          image: "{{ $.Values.global.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+
+          ports:
+            - containerPort: {{ $config.service.targetPort }}
+              protocol: TCP
+
+          {{- if $config.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ $config.livenessProbe.path }}
+              port: {{ $config.service.targetPort }}
+            initialDelaySeconds: {{ $config.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $config.livenessProbe.periodSeconds }}
+            failureThreshold: 3
+          {{- end }}
+
+          {{- if $config.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ $config.readinessProbe.path }}
+              port: {{ $config.service.targetPort }}
+            initialDelaySeconds: {{ $config.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $config.readinessProbe.periodSeconds }}
+            failureThreshold: 3
+          {{- end }}
+
+          resources:
+            requests:
+              memory: {{ $config.resources.requests.memory | quote }}
+              cpu: {{ $config.resources.requests.cpu | quote }}
+            limits:
+              memory: {{ $config.resources.limits.memory | quote }}
+              cpu: {{ $config.resources.limits.cpu | quote }}
+
+          env:
+            - name: APP_ENV
+              value: {{ $.Values.global.environment | quote }}
+
+            - name: PORT
+              value: {{ $config.service.targetPort | quote }}
+
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+{{- end }}
+{{- end }}

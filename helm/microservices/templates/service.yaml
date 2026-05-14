@@ -1,0 +1,28 @@
+{{- $services := dict
+  "javascript-api" .Values.javascriptApi
+  "java-service" .Values.javaService
+  "rust-processor" .Values.rustProcessor
+-}}
+
+{{- range $name, $config := $services }}
+{{- if $config.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  type: {{ $config.service.type }}
+
+  ports:
+    - port: {{ $config.service.port }}
+      targetPort: {{ $config.service.targetPort }}
+      protocol: TCP
+      name: http
+
+  selector:
+    app: {{ $name }}
+{{- end }}
+{{- end }}
