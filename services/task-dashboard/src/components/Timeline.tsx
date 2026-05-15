@@ -17,7 +17,7 @@ export function Timeline({ events, eventsError, lastUpdated }: TimelineProps) {
           </h2>
           <p className="mt-1 text-sm text-slate-300">
             Auto-refreshes every 2 seconds from{' '}
-            <span className="font-mono">/events</span>.
+            <span className="font-mono">/api/events</span>.
           </p>
         </div>
         <div className="w-fit rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">

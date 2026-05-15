@@ -28,7 +28,7 @@ export function TaskForm({
       <div className="border-b border-slate-200/70 px-5 py-5">
         <h2 className="text-xl font-semibold text-slate-950">Create Task</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Payload is posted to <span className="font-mono">/tasks</span>.
+          Payload is posted to <span className="font-mono">/api/tasks</span>.
         </p>
       </div>
 

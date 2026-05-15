@@ -6,7 +6,7 @@ React + TypeScript dashboard for the polyglot task-processing workflow.
 
 - Submit task payloads to the TypeScript API
 - Display Kafka-backed processing events as a timeline
-- Poll `/events` every 2 seconds
+- Poll `/api/events` every 2 seconds
 - Tailwind CSS styling through the Vite Tailwind plugin
 - Static `/healthz` endpoint for Kubernetes probes
 
@@ -55,7 +55,7 @@ cp .env.example .env
 Current variables:
 
 ```txt
-VITE_API_BASE_URL=http://localhost:3000
+VITE_API_BASE_URL=/api
 VITE_EVENTS_REFRESH_INTERVAL_MS=2000
 ```
 
@@ -69,8 +69,12 @@ EVENTS_REFRESH_INTERVAL_MS
 
 Expected backend routes:
 
-- `POST /tasks`
-- `GET /events`
+- `POST /api/tasks`
+- `GET /api/events`
+
+For local development, Vite proxies `/api` to `http://localhost:4000`.
+In Docker, nginx proxies `/api` to `http://task-gateway:4000` on the Compose
+network.
 
 ## Project Structure
 

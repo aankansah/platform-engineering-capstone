@@ -9,11 +9,15 @@ use config::Settings;
 use kafka::producer::create_producer;
 use kafka::consumer::start_consumer;
 use tracing_subscriber::prelude::*;
+use dotenv::dotenv;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // tracing
     tracing_subscriber::fmt::init();
+
+    // load .env when present (local development)
+    dotenv().ok();
 
     let settings = Settings::from_env();
 

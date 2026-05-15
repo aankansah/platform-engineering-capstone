@@ -15,6 +15,18 @@ cd services/task-validator
 ./mvnw spring-boot:run
 ```
 
+Local configuration is handled through Spring Boot properties, not a service
+`.env` file. Defaults live in `src/main/resources/application.properties`; local
+developer overrides can live in `src/main/resources/application-local.properties`
+and be enabled with:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+Container and Kubernetes deployments should continue passing runtime settings as
+environment variables, ConfigMaps, Secrets, or Helm values.
+
 Build & Docker
 
 ```bash

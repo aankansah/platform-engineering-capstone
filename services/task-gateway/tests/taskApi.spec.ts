@@ -8,7 +8,7 @@ jest.mock('../src/lib/kafkaClient', () => ({
 import { app } from '../src/index';
 import { addEvent } from '../src/repositories/eventRepository';
 
-describe('task-api endpoints', () => {
+describe('task-gateway endpoints', () => {
   it('creates a task and returns task with taskId', async () => {
     const payload = { name: 'Process Customer Data', priority: 'high', description: 'desc' };
     const res = await request(app).post('/api/tasks').send(payload).expect(201);

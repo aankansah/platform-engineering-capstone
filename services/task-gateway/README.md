@@ -1,11 +1,11 @@
-# task-api
+# task-gateway
 
 TypeScript API gateway that accepts tasks from the frontend and publishes them to Kafka (`tasks` topic). It also consumes `events` from Kafka and exposes them to the frontend.
 
 Environment variables:
 - `KAFKA_BROKERS` (comma-separated, default `localhost:9092`)
-- `KAFKA_CLIENT_ID` (default `task-api`)
-- `KAFKA_GROUP_ID` (default `task-api-group`)
+- `KAFKA_CLIENT_ID` (default `task-gateway`)
+- `KAFKA_GROUP_ID` (default `task-gateway-group`)
 - `PORT` (default `4000`)
 
 Endpoints:
@@ -16,16 +16,16 @@ Endpoints:
 Run locally:
 
 ```
-cd services/task-api
+cd services/task-gateway
 npm install
 npm run build
-KAFKA_BROKERS=localhost:9092 npm start
+KAFKA_BROKERS=localhost:29092 npm start
 ```
 
 Development
 
 ```bash
-cd services/task-api
+cd services/task-gateway
 npm install
 npm run dev
 ```
@@ -39,6 +39,6 @@ npm test
 Docker
 
 ```bash
-docker build -t platform-task-api:latest services/task-api
-docker run -e KAFKA_BROKERS=localhost:9092 -p 4000:4000 platform-task-api:latest
+docker build -t platform-task-gateway:latest services/task-gateway
+docker run -e KAFKA_BROKERS=localhost:29092 -p 4000:4000 platform-task-gateway:latest
 ```

@@ -48,12 +48,12 @@ The Polyglot Task Pipeline is a simple event-driven application that demonstrate
 ### Data Flow (Simple)
 
 - The user submits a task from the `task-dashboard` web application by providing a task name, priority, and description.
-- The `task-dashboard` sends the request to `POST /api/tasks` exposed by the `task-api` service.
-- The `task-api` service generates a unique `taskId` and publishes the task message to the Kafka topic `tasks`.
+- The `task-dashboard` sends the request to `POST /api/tasks` exposed by the `task-gateway` service.
+- The `task-gateway` service generates a unique `taskId` and publishes the task message to the Kafka topic `tasks`.
 - The `task-validator` service (built with Java and Spring Boot) consumes messages from the `tasks` topic, performs basic validation, and publishes a validation event to the Kafka topic `task-events`.
 - The `task-enricher` service (built with Rust) also consumes messages from the `tasks` topic, adds additional metadata to the task, and publishes an enrichment event to the Kafka topic `task-events`.
-- The `task-api` service consumes messages from the `task-events` topic and stores them in memory.
-- The `task-dashboard` periodically calls `GET /api/events` exposed by `task-api` to retrieve the latest processing events.
+- The `task-gateway` service consumes messages from the `task-events` topic and stores them in memory.
+- The `task-dashboard` periodically calls `GET /api/events` exposed by `task-gateway` to retrieve the latest processing events.
 - The user sees a processing timeline in the dashboard showing each step completed by the downstream services.
 
 ### Example Processing Timeline

@@ -1,12 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import tasksRouter from './routes/tasks';
 import eventsRouter from './routes/events';
 import { startKafkaConsumer, startKafkaProducer, shutdown } from './lib/kafkaClient';
+import config from './config';
 import logger from './middleware/logger';
 
-dotenv.config();
 
 export const app = express();
 app.use(cors());
@@ -18,7 +17,7 @@ app.use('/api/events', eventsRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-const PORT = Number(process.env.PORT) || 4000;
+const PORT = config.PORT;
 
 export async function start() {
   try {
@@ -29,7 +28,7 @@ export async function start() {
   }
 
   const server = app.listen(PORT, () => {
-    console.log(`task-api listening on ${PORT}`);
+    console.log(`task-gateway listening on ${PORT}`);
   });
 
   const stop = async () => {

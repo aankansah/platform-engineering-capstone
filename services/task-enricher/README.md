@@ -16,6 +16,23 @@ cargo build --release
 KAFKA_BROKERS=localhost:9092 ./target/release/task-enricher
 ```
 
+Configuration is read from process environment variables in `src/config.rs`.
+Rust does not load `.env` files by default, so local development should export
+variables in the shell or pass them inline:
+
+```bash
+KAFKA_BROKERS=localhost:9092 \
+CONSUMER_GROUP=task-enricher-group \
+LISTEN_ADDR=0.0.0.0:8080 \
+./target/release/task-enricher
+```
+
+Supported variables:
+
+- `KAFKA_BROKERS`, default `localhost:9092`
+- `CONSUMER_GROUP`, default `task-enricher-group`
+- `LISTEN_ADDR`, default `0.0.0.0:8080`
+
 Run tests
 
 ```bash
@@ -46,4 +63,3 @@ Debugging tips
 
 - Logs: the service uses `tracing` — check stdout logs from the container for consumer/producer errors.
 - Kafka inspection: use the provided `services/docker-compose.yml` to run a local Kafka and use the console consumer to inspect topics.
-
