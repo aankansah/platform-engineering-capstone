@@ -1,8 +1,10 @@
 package com.polyglottaskpipeline.task_validator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.HashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,8 +38,12 @@ public class TaskProcessorTest {
 
     @BeforeEach
     void setup() {
-        var consumerProps = KafkaTestUtils.consumerProps("testGroup", "true", embeddedKafkaBroker);
-        var cf = new DefaultKafkaConsumerFactory<>(consumerProps);
+        Map<String, Object> consumerProps = new HashMap<>(
+                KafkaTestUtils.consumerProps("testGroup", "true", embeddedKafkaBroker)
+        );
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        DefaultKafkaConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
         consumer = cf.createConsumer();
         consumer.subscribe(java.util.List.of("task-events"));
     }
