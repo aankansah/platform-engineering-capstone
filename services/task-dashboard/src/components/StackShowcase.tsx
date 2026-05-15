@@ -39,7 +39,7 @@ const stackGroups: StackGroup[] = [
     items: [
       { name: 'Node.js', role: 'API gateway service', initials: 'JS' },
       { name: 'TypeScript', role: 'API implementation', image: tsIcon },
-      { name: 'Java 17', role: 'Task validation service', image: javaEmblem },
+      { name: 'Java 21', role: 'Task validation service', image: javaEmblem },
       { name: 'Spring Boot', role: 'Java service runtime', image: javaEmblem },
       { name: 'Rust', role: 'Task enrichment processor', image: rustEmblem },
       { name: 'Kafka', role: 'Tasks and events topics', image: kafkaEmblem },
@@ -99,7 +99,7 @@ const stackGroups: StackGroup[] = [
       { name: 'kubectl', role: 'Kubernetes CLI', image: k8Emblem },
       { name: 'AWS CLI', role: 'AWS operations', initials: 'AWS' },
       { name: 'Cargo', role: 'Rust builds and tests', image: rustEmblem },
-      { name: 'OpenJDK 17', role: 'Java runtime', image: javaEmblem },
+      { name: 'OpenJDK 21', role: 'Java runtime', image: javaEmblem },
       { name: 'Node.js 20+', role: 'JavaScript runtime', initials: 'JS' },
     ],
   },
