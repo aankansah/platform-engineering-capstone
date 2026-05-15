@@ -4,7 +4,7 @@
 
 The user-facing web application where users submit tasks and view the real-time processing timeline.
 
-### task-api
+### task-gateway
 
 The central API service that accepts task submissions, publishes tasks to Kafka, and exposes processing events to the frontend.
 
@@ -27,7 +27,7 @@ The message broker that enables asynchronous communication between the microserv
 | Service            | Technology                               | Responsibility                                                 |
 | ------------------ | ---------------------------------------- | -------------------------------------------------------------- |
 | `task-dashboard` | React + TypeScript + Vite                | Frontend UI for submitting tasks and viewing processing events |
-| `task-api`       | Node.js + TypeScript + Express + KafkaJS | REST API, Kafka producer, and event aggregator                 |
+| `task-gateway` | Node.js + TypeScript + Express + KafkaJS | REST API, Kafka producer, and event aggregator                 |
 | `task-validator` | Java + Spring Boot + Spring Kafka        | Consumes tasks and validates them                              |
 | `task-enricher`  | Rust + Tokio + rdkafka                   | Consumes tasks and enriches them                               |
 | `Apache Kafka`   | Apache Kafka                             | Message broker for asynchronous communication                  |
@@ -38,7 +38,7 @@ The message broker that enables asynchronous communication between the microserv
 
 | Topic           | Purpose                                                                       |
 | --------------- | ----------------------------------------------------------------------------- |
-| `tasks`       | Carries newly submitted tasks from `task-api` to downstream processors      |
+| `tasks`       | Carries newly submitted tasks from `task-gateway` to downstream processors |
 | `task-events` | Carries processing events emitted by `task-validator` and `task-enricher` |
 
 ## Data Flow

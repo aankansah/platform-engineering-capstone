@@ -1,11 +1,13 @@
 # task-gateway
 
-TypeScript API gateway that accepts tasks from the frontend and publishes them to Kafka (`tasks` topic). It also consumes `events` from Kafka and exposes them to the frontend.
+TypeScript API gateway that accepts tasks from the frontend and publishes them to Kafka (`tasks` topic). It also consumes `task-events` from Kafka and exposes them to the frontend.
 
 Environment variables:
 - `KAFKA_BROKERS` (comma-separated, default `localhost:9092`)
 - `KAFKA_CLIENT_ID` (default `task-gateway`)
 - `KAFKA_GROUP_ID` (default `task-gateway-group`)
+- `TOPIC_TASKS` (default `tasks`)
+- `TOPIC_TASK_EVENTS` (default `task-events`)
 - `PORT` (default `4000`)
 
 Endpoints:

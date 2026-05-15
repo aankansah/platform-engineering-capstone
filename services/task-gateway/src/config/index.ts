@@ -13,7 +13,7 @@ export const KAFKA_GROUP_ID = process.env.KAFKA_GROUP_ID || 'task-gateway-group'
 
 export const TOPICS = {
   TASKS: process.env.TOPIC_TASKS || 'tasks',
-  EVENTS: process.env.TOPIC_EVENTS || 'events',
+  EVENTS: process.env.TOPIC_EVENTS || 'task-events',
   TASK_EVENTS: process.env.TOPIC_TASK_EVENTS || 'task-events',
 };
 

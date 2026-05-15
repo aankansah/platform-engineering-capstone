@@ -1,7 +1,9 @@
 Task Validator — Technical Guide
 
 Purpose
-- Java Spring Boot service that consumes `tasks` from Kafka, validates them, and publishes validation events to `events`.
+- Java Spring Boot service that consumes `tasks` from Kafka, validates them, and publishes validation events to `task-events`.
+- A valid task must include `taskId`, `name`, `description`, and a `priority` of `low`, `medium`, or `high`.
+- Validation events include `taskId`, `service`, `status`, `message`, `timestamp`, `priority`, `valid`, and `validationErrors`.
 
 Build & Run (locally)
 

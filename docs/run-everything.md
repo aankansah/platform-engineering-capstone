@@ -8,7 +8,7 @@ Overview
 
 This repository contains a polyglot microservice demo wired through Kafka. The services are located under `services/`:
 - `task-dashboard` (React frontend) — port 3000
-- `task-api` (TypeScript API gateway) — port 4000
+- `task-gateway` (TypeScript API gateway) — port 4000
 - `task-validator` (Java Spring Boot) — port 8080
 - `task-enricher` (Rust Actix service) — port 8081
 
@@ -28,8 +28,8 @@ docker compose up --build
 Smoke tests
 
 - Frontend: http://localhost:3000
-- API: http://localhost:4000 (health: `/health`)  
-- Validator: http://localhost:8080 (health: `/actuator/health` or `/health`)  
+- Gateway: http://localhost:4000 (health: `/health`)
+- Validator: http://localhost:8080 (health: `/actuator/health`)
 - Enricher: http://localhost:8081/health and `/ready`
 
 End-to-end message flow (quick)
@@ -42,9 +42,9 @@ curl -X POST http://localhost:4000/api/tasks \
   -d '{"name":"Process Customer Data","priority":"high","description":"desc"}'
 ```
 
-2. The `task-api` publishes to `tasks`. The `task-validator` consumes `tasks` and publishes a validation event to `events`. The `task-enricher` consumes `tasks`, enriches them, and publishes to `task-events`.
+2. The `task-gateway` publishes to `tasks`. The `task-validator` consumes `tasks` and publishes a validation event to `task-events`. The `task-enricher` consumes `tasks`, enriches them, and publishes to `task-events`.
 
-3. You can inspect events by checking logs of the corresponding container or by hitting the API endpoints that expose consumed events (for example `task-api` exposes `/api/events`).
+3. You can inspect events by checking logs of the corresponding container or by hitting the API endpoints that expose consumed events (for example `task-gateway` exposes `/api/events`).
 
 Kafka tools
 

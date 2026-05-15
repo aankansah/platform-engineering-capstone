@@ -15,7 +15,7 @@ async function ensureTopics(): Promise<void> {
   const admin = kafka.admin();
   try {
     await admin.connect();
-    const topicNames = [TOPICS.TASKS, TOPICS.EVENTS, TOPICS.TASK_EVENTS];
+    const topicNames = Array.from(new Set([TOPICS.TASKS, TOPICS.EVENTS, TOPICS.TASK_EVENTS]));
     const topics = topicNames.map((t) => ({ topic: t, numPartitions: 1, replicationFactor: 1 }));
     await admin.createTopics({ topics, waitForLeaders: true });
   } catch (err) {
@@ -28,7 +28,7 @@ async function ensureTopics(): Promise<void> {
 
 async function startKafkaConsumer(): Promise<void> {
   await consumer.connect();
-  await consumer.subscribe({ topic: TOPICS.EVENTS, fromBeginning: false });
+  await consumer.subscribe({ topic: TOPICS.TASK_EVENTS, fromBeginning: false });
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
@@ -36,7 +36,11 @@ async function startKafkaConsumer(): Promise<void> {
         const value = message.value ? message.value.toString() : null;
         let parsed: any = value;
         try { parsed = JSON.parse(value as string); } catch (e) {}
-        addEvent({ topic, partition, offset: message.offset, value: parsed, timestamp: Date.now() });
+        const eventTimestamp = typeof parsed?.timestamp === 'string' ? parsed.timestamp : new Date().toISOString();
+        const event = parsed && typeof parsed === 'object'
+          ? parsed
+          : { message: value ?? 'Kafka event received' };
+        addEvent({ ...event, topic, partition, offset: message.offset, timestamp: eventTimestamp });
       } catch (err) {
         console.error('Error handling message', err);
       }

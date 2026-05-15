@@ -1,10 +1,11 @@
 # task-validator (Java service)
 
-Spring Boot service that consumes from Kafka `tasks` topic and publishes validation events to `events` topic.
+Spring Boot service that consumes from Kafka `tasks` topic and publishes validation events to `task-events` topic.
 
 How it works (simple):
 - Listens for messages on Kafka topic `tasks`.
-- For each task, it emits a JSON event to `events` with `taskId`, `service`, and `message`.
+- Validates that each task has `taskId`, `name`, `description`, and a `priority` of `low`, `medium`, or `high`.
+- For each task, it emits a JSON event to `task-events` with `taskId`, `service`, `status`, `message`, `timestamp`, `priority`, `valid`, and `validationErrors`.
 
 Run locally (requires Kafka at localhost:9092):
 

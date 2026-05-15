@@ -5,6 +5,7 @@ public class TaskMessage {
     private String name;
     private String priority;
     private String description;
+    private String createdAt;
 
     public TaskMessage() {}
 
@@ -19,4 +20,7 @@ public class TaskMessage {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 }

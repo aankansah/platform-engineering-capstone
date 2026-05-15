@@ -1,4 +1,11 @@
-type EventItem = { topic: string; partition: number; offset: string; value: any; timestamp: number };
+type EventItem = {
+  topic: string;
+  partition: number;
+  offset: string;
+  timestamp: string;
+  value?: any;
+  [key: string]: any;
+};
 
 const events: EventItem[] = [];
 

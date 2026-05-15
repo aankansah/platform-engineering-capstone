@@ -42,6 +42,6 @@ export async function start() {
   process.on('SIGTERM', stop);
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && process.env.JEST_WORKER_ID === undefined) {
   void start();
 }
