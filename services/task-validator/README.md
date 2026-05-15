@@ -8,14 +8,32 @@ How it works (simple):
 
 Run locally (requires Kafka at localhost:9092):
 
-```
+Prerequisites: Java 21+, Maven
+
+```bash
 cd services/task-validator
 ./mvnw spring-boot:run
 ```
 
-Docker:
+Build & Docker
 
-```
+```bash
+cd services/task-validator
+./mvnw -DskipTests package
 docker build -t platform-task-validator:latest services/task-validator
 docker run -e KAFKA_BROKERS=localhost:9092 -p 8080:8080 platform-task-validator:latest
+```
+
+Health & Readiness
+
+- Actuator: `/actuator/health` for detailed health information.
+- In Kubernetes, add a readiness probe that confirms Kafka connectivity before marking the pod ready.
+
+Testing
+
+- Run unit & integration tests (EmbeddedKafka):
+
+```bash
+cd services/task-validator
+./mvnw test
 ```

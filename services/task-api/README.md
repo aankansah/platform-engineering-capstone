@@ -21,3 +21,24 @@ npm install
 npm run build
 KAFKA_BROKERS=localhost:9092 npm start
 ```
+
+Development
+
+```bash
+cd services/task-api
+npm install
+npm run dev
+```
+
+Run tests
+
+```bash
+npm test
+```
+
+Docker
+
+```bash
+docker build -t platform-task-api:latest services/task-api
+docker run -e KAFKA_BROKERS=localhost:9092 -p 4000:4000 platform-task-api:latest
+```

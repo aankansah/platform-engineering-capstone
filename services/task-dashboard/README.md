@@ -24,6 +24,13 @@ Run the Vite dev server:
 pnpm dev
 ```
 
+Run tests
+
+```sh
+pnpm install
+npm test
+```
+
 Build the production bundle:
 
 ```sh
