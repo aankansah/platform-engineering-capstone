@@ -23,6 +23,8 @@ variables in the shell or pass them inline:
 ```bash
 KAFKA_BROKERS=localhost:9092 \
 CONSUMER_GROUP=task-enricher-group \
+TOPIC_TASKS=tasks \
+TOPIC_TASK_EVENTS=task-events \
 LISTEN_ADDR=0.0.0.0:8080 \
 ./target/release/task-enricher
 ```
@@ -31,7 +33,11 @@ Supported variables:
 
 - `KAFKA_BROKERS`, default `localhost:9092`
 - `CONSUMER_GROUP`, default `task-enricher-group`
+- `TOPIC_TASKS`, default `tasks`
+- `TOPIC_TASK_EVENTS`, default `task-events`
 - `LISTEN_ADDR`, default `0.0.0.0:8080`
+
+Published enrichment events include `taskId`, `service`, `status`, `message`, `timestamp`, `priority`, `category`, `enrichedBy`, and `metadata`.
 
 Run tests
 

@@ -1,15 +1,14 @@
 mod config;
-mod models;
-mod kafka;
-mod services;
 mod handlers;
+mod kafka;
+mod models;
+mod services;
 
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpServer};
 use config::Settings;
-use kafka::producer::create_producer;
-use kafka::consumer::start_consumer;
-use tracing_subscriber::prelude::*;
 use dotenv::dotenv;
+use kafka::consumer::start_consumer;
+use kafka::producer::create_producer;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,9 +25,11 @@ async fn main() -> std::io::Result<()> {
     // spawn consumer
     let brokers = settings.kafka_brokers.clone();
     let group = settings.consumer_group.clone();
+    let tasks_topic = settings.tasks_topic.clone();
+    let events_topic = settings.events_topic.clone();
     let prod_clone = producer.clone();
     actix_web::rt::spawn(async move {
-        start_consumer(&brokers, &group, prod_clone).await;
+        start_consumer(&brokers, &group, &tasks_topic, &events_topic, prod_clone).await;
     });
 
     HttpServer::new(|| {

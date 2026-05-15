@@ -47,6 +47,8 @@ services:
       - "8081:8080"
     environment:
       - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - TOPIC_TASKS=${TOPIC_TASKS:-tasks}
+      - TOPIC_TASK_EVENTS=${TOPIC_TASK_EVENTS:-task-events}
     restart: unless-stopped
 
   kafka:

@@ -1,6 +1,7 @@
-FROM rust:1.72 as builder
+FROM rust:1-bookworm AS builder
 WORKDIR /usr/src/task-enricher
-COPY Cargo.toml Cargo.lock ./
+RUN apt-get update && apt-get install -y cmake && rm -rf /var/lib/apt/lists/*
+COPY Cargo.toml ./
 COPY src ./src
 
 # Build in release mode

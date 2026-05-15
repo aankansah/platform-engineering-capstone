@@ -1,6 +1,6 @@
 use actix_web::{get, HttpResponse, Responder};
+use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
-use std::net::{SocketAddr, ToSocketAddrs, TcpStream};
 
 #[get("/health")]
 pub async fn health() -> impl Responder {
@@ -22,7 +22,10 @@ pub async fn ready() -> impl Responder {
     // Split host:port
     let mut parts = first.split(':');
     let host = parts.next().unwrap_or("");
-    let port = parts.next().and_then(|p| p.parse::<u16>().ok()).unwrap_or(9092);
+    let port = parts
+        .next()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(9092);
 
     let addr = format!("{}:{}", host, port);
     // Resolve to socket addresses
@@ -40,7 +43,6 @@ pub async fn ready() -> impl Responder {
 
     HttpResponse::ServiceUnavailable().body("unreachable")
 }
-
 
 #[cfg(test)]
 mod tests {

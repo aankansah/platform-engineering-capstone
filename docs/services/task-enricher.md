@@ -2,6 +2,7 @@ Task Enricher — Technical Guide
 
 Purpose
 - Consumes `tasks` messages from Kafka, enriches payload with metadata, publishes enriched events to `task-events`.
+- Enrichment events include `taskId`, `service`, `status`, `message`, `timestamp`, `priority`, `category`, `enrichedBy`, and `metadata`.
 
 Build & Run (locally)
 
@@ -30,6 +31,8 @@ Why readiness matters
 Configuration
 - `KAFKA_BROKERS` — comma-separated list of broker addresses (default: `localhost:9092`)
 - `CONSUMER_GROUP` — consumer group id (default: `task-enricher-group`)
+- `TOPIC_TASKS` — task input topic (default: `tasks`)
+- `TOPIC_TASK_EVENTS` — processing event output topic (default: `task-events`)
 - `LISTEN_ADDR` — HTTP listen address (default: `0.0.0.0:8080`)
 
 Testing
