@@ -1,10 +1,8 @@
 import express from 'express';
-import { getEvents } from '../kafkaClient';
+import { listEvents } from '../controllers/eventsController';
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  res.json({ events: getEvents() });
-});
+router.get('/', listEvents);
 
 export default router;

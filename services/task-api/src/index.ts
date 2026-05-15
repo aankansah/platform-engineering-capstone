@@ -3,13 +3,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import tasksRouter from './routes/tasks';
 import eventsRouter from './routes/events';
-import { startKafkaConsumer, startKafkaProducer, shutdown } from './kafkaClient';
+import { startKafkaConsumer, startKafkaProducer, shutdown } from './lib/kafkaClient';
+import logger from './middleware/logger';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(logger);
 
 app.use('/api/tasks', tasksRouter);
 app.use('/api/events', eventsRouter);
@@ -18,7 +20,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = Number(process.env.PORT) || 4000;
 
-async function start() {
+export async function start() {
   try {
     await startKafkaProducer();
     await startKafkaConsumer();
@@ -41,4 +43,6 @@ async function start() {
   process.on('SIGTERM', stop);
 }
 
-start();
+if (process.env.NODE_ENV !== 'test') {
+  void start();
+}

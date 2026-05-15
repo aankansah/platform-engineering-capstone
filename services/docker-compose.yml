@@ -1,11 +1,22 @@
 version: "3.8"
 
 services:
-  frontend-app:
+  task-dashboard:
     build:
-      context: ./frontend-app
+      context: ./task-dashboard
       dockerfile: Dockerfile
-    image: platform-frontend-app:latest
+    image: platform-task-dashboard:latest
     ports:
       - "3000:80"
+    restart: unless-stopped
+
+  task-api:
+    build:
+      context: ./task-api
+      dockerfile: Dockerfile
+    image: platform-task-api:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-localhost:9092}
     restart: unless-stopped
