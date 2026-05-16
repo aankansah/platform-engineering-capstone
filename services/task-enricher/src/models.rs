@@ -18,7 +18,11 @@ pub struct EnrichedEvent {
     pub service: String,
     pub status: String,
     pub message: String,
+    pub enrichment_summary: String,
     pub timestamp: DateTime<Utc>,
+    pub title: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
     pub priority: Option<String>,
     pub category: String,
     pub enriched_by: String,
@@ -30,6 +34,8 @@ pub struct EnrichedEvent {
 pub struct EnrichmentMetadata {
     pub name_length: usize,
     pub description_length: usize,
+    pub description_word_count: usize,
     pub priority_rank: u8,
     pub has_description: bool,
+    pub estimated_effort: String,
 }

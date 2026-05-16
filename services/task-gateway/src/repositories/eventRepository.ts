@@ -14,7 +14,7 @@ function addEvent(item: EventItem) {
 }
 
 function getAllEvents(): EventItem[] {
-  return events.slice().reverse();
+  return events.slice();
 }
 
 export { addEvent, getAllEvents };

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { AppSidebar } from './components/AppSidebar'
+import { EventDetailsModal } from './components/EventDetails'
 import { ProjectInfoFab } from './components/ProjectInfoFab'
 import { ProjectInfoModal } from './components/ProjectInfoModal'
 import { TaskForm } from './components/TaskForm'
+import { TaskHistory } from './components/TaskHistory'
 import { Timeline } from './components/Timeline'
-import { WelcomeAlert } from './components/WelcomeAlert'
 import { useTaskDashboard } from './hooks/useTaskDashboard'
 
 function App() {
@@ -14,11 +15,14 @@ function App() {
     eventsError,
     isSubmitting,
     lastUpdated,
+    events,
+    selectedEvent,
+    setSelectedEventId,
     setTask,
     submitMessage,
     submitTask,
     task,
-    taskEvents,
+    tasks,
   } = useTaskDashboard()
 
   return (
@@ -36,13 +40,14 @@ function App() {
           />
         </AppSidebar>
 
-        <section className="min-h-0 overflow-y-auto px-8 pt-10 pb-8">
-          <div className="flex min-h-full flex-col gap-6">
-            <WelcomeAlert />
+        <section className="min-h-0 overflow-hidden px-6 pt-6 pb-6">
+          <div className="grid h-full min-h-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_410px]">
+            <TaskHistory tasks={tasks} />
             <Timeline
-              events={taskEvents}
+              events={events}
               eventsError={eventsError}
               lastUpdated={lastUpdated}
+              onSelectEvent={setSelectedEventId}
             />
           </div>
         </section>
@@ -52,6 +57,11 @@ function App() {
       <ProjectInfoModal
         isOpen={isProjectInfoOpen}
         onClose={() => setIsProjectInfoOpen(false)}
+      />
+      <EventDetailsModal
+        event={selectedEvent}
+        isOpen={Boolean(selectedEvent)}
+        onClose={() => setSelectedEventId('')}
       />
     </main>
   )

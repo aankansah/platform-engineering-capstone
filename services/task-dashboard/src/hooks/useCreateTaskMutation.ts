@@ -11,9 +11,9 @@ export function useCreateTaskMutation() {
     setSubmitMessage('')
 
     try {
-      await createTask(task)
+      const submitted = await createTask(task)
       setSubmitMessage('Task submitted to the processing pipeline.')
-      return true
+      return submitted
     } catch (error) {
       setSubmitMessage(
         error instanceof Error ? error.message : 'Unable to submit task',

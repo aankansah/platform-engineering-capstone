@@ -23,7 +23,7 @@ export function useEventsQuery() {
   }, [])
 
   const prependEvent = useCallback((event: TimelineEvent) => {
-    setEvents((currentEvents) => [event, ...currentEvents])
+    setEvents((currentEvents) => [...currentEvents, event])
   }, [])
 
   useEffect(() => {

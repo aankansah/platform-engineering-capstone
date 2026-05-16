@@ -1,7 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high'
 
 export type TaskPayload = {
-  taskId: string
   name: string
   description: string
   priority: Priority

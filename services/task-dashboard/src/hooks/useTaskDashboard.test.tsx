@@ -35,7 +35,7 @@ describe('useTaskDashboard', () => {
       await result.current.submitTask({ preventDefault: () => {} } as unknown as React.FormEvent<HTMLFormElement>);
     });
 
-    // after submit, taskEvents remains an array (mocked)
-    expect(Array.isArray(result.current.taskEvents)).toBe(true);
+    // after submit, events remains an array (mocked)
+    expect(Array.isArray(result.current.events)).toBe(true);
   });
 });

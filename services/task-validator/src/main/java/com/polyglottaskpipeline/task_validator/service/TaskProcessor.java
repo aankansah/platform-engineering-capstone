@@ -81,6 +81,9 @@ public class TaskProcessor {
                 status,
                 message,
                 Instant.now().toString(),
+                task.getName(),
+                task.getName(),
+                task.getDescription(),
                 task.getPriority(),
                 valid,
                 errors

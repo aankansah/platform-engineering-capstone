@@ -17,7 +17,6 @@ export function TaskForm({
   onSubmit,
 }: TaskFormProps) {
   const payloadPreview: TaskPayload = {
-    taskId: task.taskId,
     name: task.name,
     description: task.description,
     priority: task.priority,
@@ -35,27 +34,11 @@ export function TaskForm({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
         <label className="mb-4 block">
           <span className="mb-2 block text-sm font-semibold text-slate-700">
-            Task ID
-          </span>
-          <input
-            className="w-full rounded-xl border border-[#c8d8e3] bg-white px-4 py-3 text-sm font-medium text-slate-950 outline-none ring-blue-400 transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2"
-            value={task.taskId}
-            onChange={(event) =>
-              setTask((currentTask) => ({
-                ...currentTask,
-                taskId: event.target.value,
-              }))
-            }
-            required
-          />
-        </label>
-
-        <label className="mb-4 block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700">
             Name
           </span>
           <input
             className="w-full rounded-xl border border-[#c8d8e3] bg-white px-4 py-3 text-sm font-medium text-slate-950 outline-none ring-blue-400 transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2"
+            placeholder="Validate customer import"
             value={task.name}
             onChange={(event) =>
               setTask((currentTask) => ({
@@ -73,6 +56,7 @@ export function TaskForm({
           </span>
           <textarea
             className="min-h-36 flex-1 resize-none rounded-xl border border-[#c8d8e3] bg-white px-4 py-3 text-sm font-medium text-slate-950 outline-none ring-blue-400 transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2"
+            placeholder="Check required fields, enrich metadata, and publish processing status."
             value={task.description}
             onChange={(event) =>
               setTask((currentTask) => ({
@@ -89,7 +73,7 @@ export function TaskForm({
             Priority
           </span>
           <select
-            className="w-full rounded-xl border border-[#c8d8e3] bg-white px-4 py-3 text-sm font-medium text-slate-950 outline-none ring-blue-400 transition focus:border-blue-500 focus:ring-2"
+            className="w-full appearance-none rounded-xl border border-[#c8d8e3] bg-white bg-[linear-gradient(45deg,transparent_50%,#334155_50%),linear-gradient(135deg,#334155_50%,transparent_50%)] bg-[length:6px_6px,6px_6px] bg-[position:calc(100%-22px)_50%,calc(100%-16px)_50%] bg-no-repeat px-4 py-3 pr-12 text-sm font-medium text-slate-950 outline-none ring-blue-400 transition focus:border-blue-500 focus:ring-2"
             value={task.priority}
             onChange={(event) =>
               setTask((currentTask) => ({
@@ -104,8 +88,10 @@ export function TaskForm({
           </select>
         </label>
 
-        <pre className="mt-5 overflow-auto rounded-xl border border-[#c8d8e3] bg-[#f7fbff] p-4 text-xs font-semibold leading-5 text-blue-950 shadow-inner">
-          {JSON.stringify(payloadPreview, null, 2)}
+        <pre className="mt-5 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-4 text-xs font-semibold leading-5 text-slate-100 shadow-inner">
+          <code>
+            <JsonPreview value={payloadPreview} />
+          </code>
         </pre>
       </div>
 
@@ -125,5 +111,39 @@ export function TaskForm({
         )}
       </div>
     </form>
+  )
+}
+
+function JsonPreview({ value }: { value: TaskPayload }) {
+  return (
+    <>
+      <span className="text-slate-500">{'{'}</span>
+      {'\n'}
+      <JsonLine label="name" value={value.name} comma />
+      <JsonLine label="description" value={value.description} comma />
+      <JsonLine label="priority" value={value.priority} />
+      <span className="text-slate-500">{'}'}</span>
+    </>
+  )
+}
+
+function JsonLine({
+  comma,
+  label,
+  value,
+}: {
+  comma?: boolean
+  label: string
+  value: string
+}) {
+  return (
+    <>
+      {'  '}
+      <span className="text-sky-300">"{label}"</span>
+      <span className="text-slate-400">: </span>
+      <span className="text-emerald-300">"{value}"</span>
+      {comma && <span className="text-slate-400">,</span>}
+      {'\n'}
+    </>
   )
 }

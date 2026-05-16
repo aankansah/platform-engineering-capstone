@@ -13,4 +13,6 @@ export async function createTask(task: TaskPayload) {
   if (!response.ok) {
     throw new Error(`Task submission failed with ${response.status}`)
   }
+
+  return (await response.json()) as TaskPayload & { taskId: string; createdAt?: string }
 }
