@@ -165,3 +165,28 @@ platform-task-enricher:latest                                                   
 ```
 
 Enricher image reduced from ~161MB to ~53.5MB after switching to a multi-stage, stripped binary + distroless runtime.
+
+### Final sizes (current)
+
+```text
+platform-task-dashboard:latest                                                           6863f6d46b13         22MB         6.28MB   U
+platform-task-enricher:latest                                                            641ce32de888       53.5MB         10.8MB   U
+platform-task-gateway:latest                                                             60f8adfd8c19        194MB         48.5MB   U
+platform-task-validator:latest                                                           5ecb76debea5        202MB           86MB   U
+```
+
+### Learnings & Recommendations
+
+- Image size impacts developer and platform workflows: larger images increase CI/CD transfer times, storage usage in registries, and node pull/start times on Kubernetes which slows deployments and can delay rollouts.
+- Smaller images improve iteration speed (faster CI jobs, quicker deployment), reduce attack surface, and lower resource costs on container hosts.
+- Recommended strategies:
+    - Use multi-stage builds to keep build-time toolchains out of runtime images.
+    - Pin base images and only install native build deps in builder stages.
+    - Bundle or tree-shake application code (esbuild/webpack) and copy only artifacts needed at runtime.
+    - Strip binaries and remove debug symbols for native languages.
+    - Prefer minimal runtime images (distroless, alpine-slim) where compatible.
+    - Use build cache, layer ordering, and `.dockerignore` to avoid rebuilding unnecessary layers and to reduce context size.
+    - Use incremental/delta pushes and a fast registry (and CI caching) to speed up CI/CD.
+    - Run automated image-size checks in CI and fail or warn when thresholds are exceeded.
+
+Keep this section as the canonical final size and recommendations for the repo.

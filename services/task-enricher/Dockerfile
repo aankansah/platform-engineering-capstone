@@ -13,8 +13,14 @@ COPY src ./src
 RUN cargo build --release --locked \
     && strip target/release/task-enricher
 
-FROM gcr.io/distroless/cc-debian12:nonroot
-COPY --from=builder /usr/lib/*/libz.so.1* /usr/local/lib/
+FROM debian:bookworm-slim
+# Install minimal runtime dependencies (zlib and CA certs) so the
+# statically-built binary can run and TLS (if used) works.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /usr/src/task-enricher/target/release/task-enricher /usr/local/bin/task-enricher
+RUN chmod +x /usr/local/bin/task-enricher
 EXPOSE 8080
 CMD ["/usr/local/bin/task-enricher"]
