@@ -1,19 +1,23 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.20 AS builder
 
 WORKDIR /app
 
-# install deps and build
-COPY package.json tsconfig.json ./
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY tsconfig.json ./
 COPY src ./src
 
-RUN npm install
-RUN npm run build
+RUN pnpm build
 
-FROM node:20-alpine
+
+FROM node:20-alpine3.20
+
 WORKDIR /app
+ENV NODE_ENV=production
 
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000

@@ -39,3 +39,42 @@ platform-task-dashboard:latest    32eb98bf57df      22MB     6.28MB
 
 Dashboard image size reduced from **92.6MB** to **22MB**.
 
+## Gateway Service
+
+The gateway app build output is small. The image size was mostly from the Node base image and runtime dependencies.
+
+### Optimization
+
+Switched from installing/copying runtime `node_modules`:
+
+```dockerfile
+RUN npm install
+COPY --from=builder /app/node_modules ./node_modules
+```
+
+to bundling the app with `esbuild` and copying only `dist`:
+
+```dockerfile
+RUN pnpm build
+COPY --from=builder /app/dist ./dist
+```
+
+Build script:
+
+```json
+"build": "tsc -p tsconfig.json --noEmit && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js"
+```
+
+Also pinned the base image:
+
+```dockerfile
+FROM node:20-alpine3.20
+```
+
+### Result
+
+```text
+platform-task-gateway:latest      b12c444cc387      194MB     48.5MB   U
+```
+
+Gateway image size reduced from **291MB** to **194MB** after bundling.
