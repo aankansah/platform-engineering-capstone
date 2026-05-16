@@ -117,3 +117,51 @@ platform-task-validator:jlink-test   738d26d36c12      202MB       86MB
 ```
 
 Validator image size reduced from **375MB** to **202MB** with the custom `jlink` runtime.
+
+## Enricher Service
+
+The enricher is a Rust (Actix) service that consumes `tasks`, enriches them, and publishes `task-events`.
+
+### Optimization
+
+Switched from a single-stage image that bundled the Rust toolchain and build artifacts (large final image):
+
+```dockerfile
+# previous (single-stage)
+FROM rust:1-bookworm
+WORKDIR /usr/src/task-enricher
+COPY . .
+RUN cargo build --release
+CMD ["/usr/src/task-enricher/target/release/task-enricher"]
+```
+
+To a multi-stage build that compiles a release binary in a builder stage and copies only the stripped binary into a minimal distroless runtime:
+
+```dockerfile
+FROM rust:1-bookworm AS builder
+WORKDIR /usr/src/task-enricher
+RUN apt-get update && apt-get install -y --no-install-recommends cmake && rm -rf /var/lib/apt/lists/*
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+RUN cargo build --release --locked && strip target/release/task-enricher
+
+FROM gcr.io/distroless/cc-debian12:nonroot
+COPY --from=builder /usr/lib/*/libz.so.1* /usr/local/lib/
+COPY --from=builder /usr/src/task-enricher/target/release/task-enricher /usr/local/bin/task-enricher
+EXPOSE 8080
+CMD ["/usr/local/bin/task-enricher"]
+```
+
+Other targeted changes:
+- Install native build dependencies (e.g. `cmake`) only in the builder stage.
+- Strip the release binary to remove debug symbols.
+- Add `dotenv` for local development and `Settings::from_env()` for runtime config.
+- Add a `/ready` readiness endpoint that verifies Kafka connectivity before marking the service ready.
+
+### Result
+
+```text
+platform-task-enricher:latest                                                            641ce32de888       53.5MB         10.8MB   U
+```
+
+Enricher image reduced from ~161MB to ~53.5MB after switching to a multi-stage, stripped binary + distroless runtime.

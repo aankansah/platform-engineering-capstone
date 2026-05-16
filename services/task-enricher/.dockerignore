@@ -2,3 +2,7 @@ target
 /.git
 .env
 .DS_Store
+*.log
+.idea
+.vscode
+README.md
