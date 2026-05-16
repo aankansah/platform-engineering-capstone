@@ -17,7 +17,7 @@ COPY . .
 # Build the app
 RUN pnpm build
 
-FROM nginx:alpine
+FROM nginx:stable-alpine3.23-slim
 
 # Remove default nginx content
 RUN rm -rf /usr/share/nginx/html/*
