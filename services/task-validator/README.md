@@ -13,7 +13,7 @@ Prerequisites: Java 21+, Maven
 
 ```bash
 cd services/task-validator
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 Local configuration is handled through Spring Boot properties, not a service
@@ -34,7 +34,7 @@ Build & Docker
 cd services/task-validator
 ./mvnw -DskipTests package
 docker build -t platform-task-validator:latest services/task-validator
-docker run -e KAFKA_BROKERS=localhost:9092 -p 8080:8080 platform-task-validator:latest
+docker run -e KAFKA_BROKERS=localhost:9092 -p 8081:8080 platform-task-validator:latest
 ```
 
 Health & Readiness

@@ -18,7 +18,7 @@ Docker
 
 ```bash
 docker build -t platform-task-enricher:latest services/task-enricher
-docker run -e KAFKA_BROKERS=localhost:9092 -p 8080:8080 platform-task-enricher:latest
+docker run -e KAFKA_BROKERS=localhost:9092 -p 8082:8080 platform-task-enricher:latest
 ```
 
 Health & Readiness
@@ -33,7 +33,7 @@ Configuration
 - `CONSUMER_GROUP` — consumer group id (default: `task-enricher-group`)
 - `TOPIC_TASKS` — task input topic (default: `tasks`)
 - `TOPIC_TASK_EVENTS` — processing event output topic (default: `task-events`)
-- `LISTEN_ADDR` — HTTP listen address (default: `0.0.0.0:8080`)
+- `LISTEN_ADDR` — HTTP listen address (default: `0.0.0.0:8082` locally; Docker image sets `0.0.0.0:8080`)
 
 Testing
 - Unit tests: `cargo test` (includes enrichment unit tests)

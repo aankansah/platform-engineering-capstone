@@ -72,8 +72,8 @@ Expected backend routes:
 - `POST /api/tasks`
 - `GET /api/events`
 
-For local development, Vite proxies `/api` to `http://localhost:4000`.
-In Docker, nginx proxies `/api` to `http://task-gateway:4000` on the Compose
+For local development, Vite proxies `/api` to `http://localhost:8080`.
+In Docker, nginx proxies `/api` to `http://task-gateway:8080` on the Compose
 network.
 
 ## Project Structure

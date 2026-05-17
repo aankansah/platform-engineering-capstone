@@ -13,15 +13,15 @@ spec:
     - Egress
 
 ---
-# Allow JavaScript API to receive external traffic and call Java service
+# Allow Task Dashboard to receive external traffic and call Task Gateway
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: javascript-api-policy
+  name: task-dashboard-policy
 spec:
   podSelector:
     matchLabels:
-      app: javascript-api
+      app: task-dashboard
 
   policyTypes:
     - Ingress
@@ -34,14 +34,14 @@ spec:
               name: ingress-nginx
       ports:
         - protocol: TCP
-          port: 3000
+          port: 80
 
   egress:
-    # Allow calling Java service
+    # Allow calling Task Gateway
     - to:
         - podSelector:
             matchLabels:
-              app: java-service
+              app: task-gateway
       ports:
         - protocol: TCP
           port: 8080
@@ -62,15 +62,15 @@ spec:
           port: 443
 
 ---
-# Allow Java service to receive from JavaScript API and call Rust processor
+# Allow Task Gateway to receive dashboard traffic
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: java-service-policy
+  name: task-gateway-policy
 spec:
   podSelector:
     matchLabels:
-      app: java-service
+      app: task-gateway
 
   policyTypes:
     - Ingress
@@ -80,21 +80,72 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app: javascript-api
+              app: task-dashboard
       ports:
         - protocol: TCP
           port: 8080
 
   egress:
-    # Allow calling Rust processor
+    # Allow DNS resolution
     - to:
-        - podSelector:
+        - namespaceSelector:
             matchLabels:
-              app: rust-processor
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+
+    # Allow outbound HTTPS (ECR, AWS APIs)
+    - to: []
       ports:
         - protocol: TCP
-          port: 8090
+          port: 443
 
+---
+# Allow Task Validator platform egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-validator-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: task-validator
+
+  policyTypes:
+    - Egress
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+
+    # Allow outbound HTTPS (ECR, AWS APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Allow Task Enricher platform egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-enricher-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: task-enricher
+
+  policyTypes:
+    - Egress
+
+  egress:
     # Allow DNS resolution
     - to:
         - namespaceSelector:

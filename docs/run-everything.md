@@ -8,9 +8,9 @@ Overview
 
 This repository contains a polyglot microservice demo wired through Kafka. The services are located under `services/`:
 - `task-dashboard` (React frontend) — port 3000
-- `task-gateway` (TypeScript API gateway) — port 4000
-- `task-validator` (Java Spring Boot) — port 8080
-- `task-enricher` (Rust Actix service) — port 8081
+- `task-gateway` (TypeScript API gateway) — port 8080
+- `task-validator` (Java Spring Boot) — port 8081
+- `task-enricher` (Rust Actix service) — port 8082
 
 We provide a Docker Compose setup at `services/docker-compose.yml` that runs a local Kafka cluster (Zookeeper + Kafka) and all services.
 
@@ -28,16 +28,16 @@ docker compose up --build
 Smoke tests
 
 - Frontend: http://localhost:3000
-- Gateway: http://localhost:4000 (health: `/health`)
-- Validator: http://localhost:8080 (health: `/actuator/health`)
-- Enricher: http://localhost:8081/health and `/ready`
+- Gateway: http://localhost:8080 (health: `/health`)
+- Validator: http://localhost:8081 (health: `/actuator/health`)
+- Enricher: http://localhost:8082/health and `/ready`
 
 End-to-end message flow (quick)
 
 1. POST a task to the API (this publishes a message to the `tasks` topic):
 
 ```bash
-curl -X POST http://localhost:4000/api/tasks \
+curl -X POST http://localhost:8080/api/tasks \
   -H 'Content-Type: application/json' \
   -d '{"name":"Process Customer Data","priority":"high","description":"desc"}'
 ```

@@ -12,14 +12,14 @@ Requirements: Java 21+, Maven
 ```bash
 cd services/task-validator
 ./mvnw -DskipTests package
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 Docker
 
 ```bash
 docker build -t platform-task-validator:latest services/task-validator
-docker run -e KAFKA_BROKERS=localhost:9092 -p 8080:8080 platform-task-validator:latest
+docker run -e KAFKA_BROKERS=localhost:9092 -p 8081:8080 platform-task-validator:latest
 ```
 
 Health & Actuator

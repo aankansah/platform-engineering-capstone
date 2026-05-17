@@ -8,7 +8,7 @@ Environment variables:
 - `KAFKA_GROUP_ID` (default `task-gateway-group`)
 - `TOPIC_TASKS` (default `tasks`)
 - `TOPIC_TASK_EVENTS` (default `task-events`)
-- `PORT` (default `4000`)
+- `PORT` (default `8080`)
 
 Endpoints:
 - `POST /api/tasks` — publish JSON payload to `tasks` topic (returns created task with `taskId`)
@@ -42,5 +42,5 @@ Docker
 
 ```bash
 docker build -t platform-task-gateway:latest services/task-gateway
-docker run -e KAFKA_BROKERS=localhost:29092 -p 4000:4000 platform-task-gateway:latest
+docker run -e KAFKA_BROKERS=localhost:29092 -p 8080:8080 platform-task-gateway:latest
 ```

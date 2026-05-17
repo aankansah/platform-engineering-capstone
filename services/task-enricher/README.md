@@ -25,7 +25,7 @@ KAFKA_BROKERS=localhost:9092 \
 CONSUMER_GROUP=task-enricher-group \
 TOPIC_TASKS=tasks \
 TOPIC_TASK_EVENTS=task-events \
-LISTEN_ADDR=0.0.0.0:8080 \
+LISTEN_ADDR=0.0.0.0:8082 \
 ./target/release/task-enricher
 ```
 
@@ -35,7 +35,7 @@ Supported variables:
 - `CONSUMER_GROUP`, default `task-enricher-group`
 - `TOPIC_TASKS`, default `tasks`
 - `TOPIC_TASK_EVENTS`, default `task-events`
-- `LISTEN_ADDR`, default `0.0.0.0:8080`
+- `LISTEN_ADDR`, default `0.0.0.0:8082` locally; the Docker image sets it to `0.0.0.0:8080`
 
 Published enrichment events include `taskId`, `service`, `status`, `message`, `timestamp`, `priority`, `category`, `enrichedBy`, and `metadata`.
 
@@ -57,7 +57,7 @@ docker build -t platform-task-enricher:latest services/task-enricher
 Run the container (pointing at a Kafka broker):
 
 ```bash
-docker run -e KAFKA_BROKERS=localhost:9092 -p 8080:8080 platform-task-enricher:latest
+docker run -e KAFKA_BROKERS=localhost:9092 -p 8082:8080 platform-task-enricher:latest
 ```
 
 Health & Readiness

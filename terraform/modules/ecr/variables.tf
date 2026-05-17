@@ -8,5 +8,5 @@ variable "project_name" {
 
 variable "repositories" {
   type    = list(string)
-  default = ["javascript-api", "java-service", "rust-processor"]
+  default = ["task-dashboard", "task-gateway", "task-validator", "task-enricher"]
 }

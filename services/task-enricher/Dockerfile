@@ -22,5 +22,6 @@ RUN apt-get update \
 
 COPY --from=builder /usr/src/task-enricher/target/release/task-enricher /usr/local/bin/task-enricher
 RUN chmod +x /usr/local/bin/task-enricher
+ENV LISTEN_ADDR=0.0.0.0:8080
 EXPOSE 8080
 CMD ["/usr/local/bin/task-enricher"]
