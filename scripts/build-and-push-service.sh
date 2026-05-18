@@ -11,6 +11,11 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:?AWS_ACCOUNT_ID is required}"
 PROJECT_NAME="${PROJECT_NAME:-ent-aws-capstone}"
 PLATFORM="${PLATFORM:-linux/amd64}"
+if [[ ! "$PLATFORM" =~ ^[a-z0-9]+/[a-z0-9_]+([/-][a-z0-9_.-]+)?$ ]]; then
+  echo "Invalid PLATFORM value: ${PLATFORM}"
+  echo "Use a Docker platform such as linux/amd64 or linux/arm64."
+  exit 1
+fi
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 ECR_BASE="${ECR_REGISTRY}/${PROJECT_NAME}"
 
