@@ -1,7 +1,8 @@
 {{- $services := dict
-  "javascript-api" .Values.javascriptApi
-  "java-service" .Values.javaService
-  "rust-processor" .Values.rustProcessor
+  "task-dashboard" .Values.taskDashboard
+  "task-enricher" .Values.taskEnricher
+  "task-gateway" .Values.taskGateway
+  "task-validator" .Values.taskValidator
 -}}
 
 {{- range $name, $config := $services }}
@@ -46,12 +47,21 @@ spec:
 
       containers:
         - name: {{ $name }}
-          image: "{{ $.Values.global.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+          image: "{{ $config.image.repository }}:{{ $config.image.tag }}"
           imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
 
           ports:
             - containerPort: {{ $config.service.targetPort }}
               protocol: TCP
+
+          securityContext:
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+
+          {{- with $config.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 
           {{- if $config.livenessProbe }}
           livenessProbe:
@@ -97,5 +107,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+
+      {{- with $config.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
 {{- end }}

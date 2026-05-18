@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  task-dashboard:
+    build:
+      context: ./task-dashboard
+      dockerfile: Dockerfile
+    image: platform-task-dashboard:latest
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+  task-gateway:
+    build:
+      context: ./task-gateway
+      dockerfile: Dockerfile
+    image: platform-task-gateway:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID:-task-gateway}
+      - KAFKA_GROUP_ID=${KAFKA_GROUP_ID:-task-gateway-group}
+      - TOPIC_TASKS=${TOPIC_TASKS:-tasks}
+      - TOPIC_EVENTS=${TOPIC_EVENTS:-task-events}
+      - TOPIC_TASK_EVENTS=${TOPIC_TASK_EVENTS:-task-events}
+    restart: unless-stopped
+
+  task-validator:
+    build:
+      context: ./task-validator
+      dockerfile: Dockerfile
+    image: platform-task-validator:latest
+    ports:
+      - "8081:8080"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - APPLICATION_TOPICS_EVENTS=${APPLICATION_TOPICS_EVENTS:-task-events}
+      - SERVER_PORT=8080
+    restart: unless-stopped
+
+  task-enricher:
+    build:
+      context: ./task-enricher
+      dockerfile: Dockerfile
+    image: platform-task-enricher:latest
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - TOPIC_TASKS=${TOPIC_TASKS:-tasks}
+      - TOPIC_TASK_EVENTS=${TOPIC_TASK_EVENTS:-task-events}
+      - LISTEN_ADDR=0.0.0.0:8080
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8083:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092

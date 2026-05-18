@@ -1,7 +1,7 @@
 global:
   environment: production
 
-javascriptApi:
+taskDashboard:
   replicaCount: 3
 
   resources:
@@ -18,7 +18,24 @@ javascriptApi:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
 
-javaService:
+taskGateway:
+  replicaCount: 2
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+taskValidator:
   replicaCount: 2
 
   resources:
@@ -33,14 +50,16 @@ javaService:
     enabled: true
     minReplicas: 2
     maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
 
-rustProcessor:
+taskEnricher:
   replicaCount: 2
 
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 15
+    targetCPUUtilizationPercentage: 80
 
 podDisruptionBudget:
   enabled: true

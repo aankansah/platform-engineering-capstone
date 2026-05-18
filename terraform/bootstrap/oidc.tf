@@ -14,7 +14,7 @@ provider "aws" {
 
 module "github_oidc" {
   source           = "../modules/github-oidc"
-  github_org       = "aankansah" # ← change this
+  github_org       = "aankansah"
   github_repo      = "platform-engineering-capstone"
   allowed_branches = ["main", "develop", "staging"]
   project_name     = "capstone"

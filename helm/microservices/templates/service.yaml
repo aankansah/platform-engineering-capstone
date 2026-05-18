@@ -1,7 +1,8 @@
 {{- $services := dict
-  "javascript-api" .Values.javascriptApi
-  "java-service" .Values.javaService
-  "rust-processor" .Values.rustProcessor
+  "task-dashboard" .Values.taskDashboard
+  "task-enricher" .Values.taskEnricher
+  "task-gateway" .Values.taskGateway
+  "task-validator" .Values.taskValidator
 -}}
 
 {{- range $name, $config := $services }}
