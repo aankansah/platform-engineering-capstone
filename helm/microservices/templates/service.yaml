@@ -1,3 +1,8 @@
+{{/*
+  Build one Kubernetes Service per enabled application.
+  Services give pods a stable DNS name and virtual IP even as individual pods
+  are replaced during rollouts or rescheduled onto different nodes.
+*/}}
 {{- $services := dict
   "task-dashboard" .Values.taskDashboard
   "task-enricher" .Values.taskEnricher
@@ -5,6 +10,7 @@
   "task-validator" .Values.taskValidator
 -}}
 
+{{/* Render Services only for workloads enabled in values.yaml. */}}
 {{- range $name, $config := $services }}
 {{- if $config.enabled }}
 ---
@@ -13,17 +19,26 @@ kind: Service
 metadata:
   name: {{ $name }}
   labels:
+    # Keep Service labels aligned with Deployments for discovery and operations.
     app: {{ $name }}
 spec:
+  # ClusterIP is the usual internal-only service type. Switch to LoadBalancer or
+  # NodePort only when this service must be exposed outside the cluster directly.
   type: {{ $config.service.type }}
 
   ports:
+    # port is the stable Service port clients call; targetPort is the container
+    # listener in the backing pods. They can differ, as with dashboard 3000 -> 80.
     - port: {{ $config.service.port }}
       targetPort: {{ $config.service.targetPort }}
       protocol: TCP
+      # Naming ports is useful for readability and required by some tooling when
+      # multiple ports exist on the same Service.
       name: http
 
   selector:
+    # The selector decides which pods receive traffic. It must match pod labels
+    # in deployment.yaml, or the Service will have no endpoints.
     app: {{ $name }}
 {{- end }}
 {{- end }}

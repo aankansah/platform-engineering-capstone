@@ -1,15 +1,22 @@
+# Local Kind values.
+# These images must match scripts/kind-build-load-all-services.sh because Kind
+# runs inside Docker nodes and can only use images that were loaded into that
+# cluster or pulled from a registry.
 global:
-  environment: dev
-  imagePullPolicy: IfNotPresent
+  environment: local
+  # Never makes local failures obvious: if the image was not loaded into Kind,
+  # Kubernetes fails fast instead of trying Docker Hub for task-dashboard:local.
+  imagePullPolicy: Never
 
-# ── Task Dashboard ──────────────────────────────────────────────────────────
+# The dashboard container serves static assets through nginx on port 80, while
+# the local workflow exposes the app through Service port 3000 for familiarity.
 taskDashboard:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-dashboard
-    tag: latest
+    repository: task-dashboard
+    tag: local
 
   service:
     type: ClusterIP
@@ -35,6 +42,8 @@ taskDashboard:
     initialDelaySeconds: 30
     periodSeconds: 10
 
+  # nginx runs as a non-root user in the chart, so its runtime write paths need
+  # ephemeral volumes instead of writing into the image filesystem.
   volumeMounts:
     - name: nginx-cache
       mountPath: /var/cache/nginx
@@ -51,14 +60,15 @@ taskDashboard:
     - name: nginx-tmp
       emptyDir: {}
 
-# ── Task Gateway ────────────────────────────────────────────────────────────
+# The gateway image name is intentionally unqualified so Kubernetes uses the
+# image loaded into the Kind node, not ECR.
 taskGateway:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-gateway
-    tag: latest
+    repository: task-gateway
+    tag: local
 
   service:
     type: ClusterIP
@@ -84,14 +94,13 @@ taskGateway:
     initialDelaySeconds: 30
     periodSeconds: 10
 
-# ── Task Validator ──────────────────────────────────────────────────────────
 taskValidator:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-validator
-    tag: latest
+    repository: task-validator
+    tag: local
 
   service:
     type: ClusterIP
@@ -114,7 +123,7 @@ taskValidator:
 
   livenessProbe:
     path: /actuator/health
-    initialDelaySeconds: 60 # Spring Boot starts slowly
+    initialDelaySeconds: 60
     periodSeconds: 15
 
   readinessProbe:
@@ -122,14 +131,13 @@ taskValidator:
     initialDelaySeconds: 10
     periodSeconds: 10
 
-# ── Task Enricher ───────────────────────────────────────────────────────────
 taskEnricher:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-enricher
-    tag: latest
+    repository: task-enricher
+    tag: local
 
   service:
     type: ClusterIP
@@ -138,7 +146,7 @@ taskEnricher:
 
   resources:
     requests:
-      memory: "64Mi" # Rust is very lean on memory
+      memory: "64Mi"
       cpu: "50m"
     limits:
       memory: "128Mi"
@@ -155,13 +163,18 @@ taskEnricher:
     initialDelaySeconds: 10
     periodSeconds: 10
 
+  # Readiness is useful locally because the service can be running while Kafka
+  # is still starting; traffic should wait until dependency checks pass.
   readinessProbe:
     path: /ready
     initialDelaySeconds: 10
     periodSeconds: 10
 
 networkPolicies:
+  # Local Kind clusters often do not enforce NetworkPolicy unless a supporting
+  # CNI is installed; keeping this on matches EKS behavior when supported.
   enabled: true
 
 podDisruptionBudget:
-  enabled: false # Enabled in staging and production values
+  # A single-node local cluster cannot satisfy multi-pod disruption guarantees.
+  enabled: false

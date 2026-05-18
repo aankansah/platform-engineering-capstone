@@ -1,12 +1,15 @@
 {{- if .Values.networkPolicies.enabled }}
 ---
-# Default deny all ingress and egress in the namespace
+# Default deny all ingress and egress in the namespace.
+# This is the baseline for least-privilege networking: every allowed path below
+# must be declared explicitly, which makes service dependencies visible.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny
   namespace: {{ .Values.global.environment }}
 spec:
+  # Empty podSelector means "all pods in this namespace."
   podSelector: {}
   policyTypes:
     - Ingress
@@ -19,6 +22,7 @@ kind: NetworkPolicy
 metadata:
   name: task-dashboard-policy
 spec:
+  # This policy applies only to pods with app=task-dashboard.
   podSelector:
     matchLabels:
       app: task-dashboard
@@ -28,6 +32,7 @@ spec:
     - Egress
 
   ingress:
+    # Allow ingress controller traffic to reach nginx in the dashboard container.
     - from:
         - namespaceSelector:
             matchLabels:
@@ -37,7 +42,7 @@ spec:
           port: 80
 
   egress:
-    # Allow calling Task Gateway
+    # Allow the frontend nginx proxy to call the API gateway service.
     - to:
         - podSelector:
             matchLabels:
@@ -46,7 +51,7 @@ spec:
         - protocol: TCP
           port: 8080
 
-    # Allow DNS resolution
+    # DNS is required for service-name lookups such as task-gateway.
     - to:
         - namespaceSelector:
             matchLabels:
@@ -55,7 +60,9 @@ spec:
         - protocol: UDP
           port: 53
 
-    # Allow outbound HTTPS (ECR, AWS APIs)
+    # Allow outbound HTTPS for platform integrations. Depending on the CNI,
+    # image pulls may not be governed by pod NetworkPolicies, but keeping this
+    # explicit is useful for workloads that call external HTTPS APIs.
     - to: []
       ports:
         - protocol: TCP
@@ -77,6 +84,7 @@ spec:
     - Egress
 
   ingress:
+    # Only the dashboard should call the public API surface in this namespace.
     - from:
         - podSelector:
             matchLabels:
@@ -113,6 +121,8 @@ spec:
       app: task-validator
 
   policyTypes:
+    # Validator consumes and publishes through Kafka, so it does not need direct
+    # ingress from other app pods in this chart.
     - Egress
 
   egress:
@@ -143,6 +153,8 @@ spec:
       app: task-enricher
 
   policyTypes:
+    # Enricher is event-driven through Kafka. Keep it egress-only unless you add
+    # a user-facing or service-facing HTTP path.
     - Egress
 
   egress:

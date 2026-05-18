@@ -1,16 +1,34 @@
 # helm/microservices/Chart.yaml
+# v2 charts are Helm 3 charts. Use v1 only for legacy Helm 2 compatibility.
 apiVersion: v2
+
+# Chart name is the package identity used by Helm repositories and releases.
 name: microservices
+
+# Short human-readable summary shown by helm search and chart repositories.
 description: Enterprise polyglot microservices platform
+
+# application means this chart deploys runnable workloads. The other common
+# chart type is library, which only provides reusable templates.
 type: application
+
+# Chart version tracks changes to the Helm package itself. Bump this when chart
+# templates or default values change.
 version: 0.1.0
+
+# appVersion describes the application release represented by the chart. It is
+# informational and does not automatically set container image tags.
 appVersion: "1.0.0"
+
+# Optional icon helps identify the chart in registries and dashboards.
 icon: https://raw.githubusercontent.com/helm/helm/main/docs/images/helm.svg
 
+# Keywords improve discoverability in chart repositories.
 keywords:
   - microservices
   - platform-engineering
 
+# Maintainer metadata gives operators a clear owner when the chart needs changes.
 maintainers:
   - name: Augustine N. Nkansah
     email: aankansah22@gmail.com
