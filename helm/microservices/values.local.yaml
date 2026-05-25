@@ -219,7 +219,7 @@ kafkaUi:
 networkPolicies:
   # Local Kind clusters often do not enforce NetworkPolicy unless a supporting
   # CNI is installed; keeping this on matches EKS behavior when supported.
-  enabled: false
+  enabled: true
 
 podDisruptionBudget:
   # A single-node local cluster cannot satisfy multi-pod disruption guarantees.
