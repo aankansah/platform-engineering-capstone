@@ -4,9 +4,9 @@
 # cluster or pulled from a registry.
 global:
   environment: local
-  # Never makes local failures obvious: if the image was not loaded into Kind,
-  # Kubernetes fails fast instead of trying Docker Hub for task-dashboard:local.
-  imagePullPolicy: Never
+  # IfNotPresent works well with Kind because the build script preloads these
+  # local tags into the node, while avoiding unnecessary pulls on pod restarts.
+  imagePullPolicy: IfNotPresent
 
 # The dashboard container serves static assets through nginx on port 80, while
 # the local workflow exposes the app through Service port 3000 for familiarity.
@@ -70,6 +70,20 @@ taskGateway:
     repository: task-gateway
     tag: local
 
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: KAFKA_CLIENT_ID
+      value: task-gateway
+    - name: KAFKA_GROUP_ID
+      value: task-gateway-group
+    - name: TOPIC_TASKS
+      value: tasks
+    - name: TOPIC_EVENTS
+      value: task-events
+    - name: TOPIC_TASK_EVENTS
+      value: task-events
+
   service:
     type: ClusterIP
     port: 8080
@@ -101,6 +115,14 @@ taskValidator:
   image:
     repository: task-validator
     tag: local
+
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: APPLICATION_TOPICS_EVENTS
+      value: task-events
+    - name: SERVER_PORT
+      value: "8080"
 
   service:
     type: ClusterIP
@@ -139,6 +161,16 @@ taskEnricher:
     repository: task-enricher
     tag: local
 
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: TOPIC_TASKS
+      value: tasks
+    - name: TOPIC_TASK_EVENTS
+      value: task-events
+    - name: LISTEN_ADDR
+      value: 0.0.0.0:8080
+
   service:
     type: ClusterIP
     port: 8082
@@ -170,10 +202,24 @@ taskEnricher:
     initialDelaySeconds: 10
     periodSeconds: 10
 
+kafka:
+  enabled: true
+  name: ent-kafka
+  version: 4.1.2
+  replicas: 1
+  storage:
+    type: ephemeral
+
+kafkaUi:
+  enabled: true
+  image: provectuslabs/kafka-ui:latest
+  service:
+    port: 8080
+
 networkPolicies:
   # Local Kind clusters often do not enforce NetworkPolicy unless a supporting
   # CNI is installed; keeping this on matches EKS behavior when supported.
-  enabled: true
+  enabled: false
 
 podDisruptionBudget:
   # A single-node local cluster cannot satisfy multi-pod disruption guarantees.

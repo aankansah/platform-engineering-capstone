@@ -147,6 +147,10 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 
+            {{- with $config.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
       {{- with $config.volumes }}
       # Optional pod volumes pair with volumeMounts above. emptyDir is commonly
       # used for ephemeral runtime storage that should disappear with the pod.
