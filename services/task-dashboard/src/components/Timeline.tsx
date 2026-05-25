@@ -98,7 +98,7 @@ export function Timeline({
   )
 }
 
-export function eventKey(event: TimelineEvent, index: number) {
+function eventKey(event: TimelineEvent, index: number) {
   return String(event.id ?? `${event.taskId ?? 'event'}-${event.service ?? 'service'}-${event.timestamp ?? index}`)
 }
 

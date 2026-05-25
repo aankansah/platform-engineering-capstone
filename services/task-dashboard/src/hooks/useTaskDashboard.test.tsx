@@ -1,6 +1,7 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-hooks';
 import { vi } from 'vitest';
+import type { TaskPayload } from '../types';
 
 // Mock the two hooks used inside useTaskDashboard
 vi.mock('./useEventsQuery', () => ({
@@ -17,7 +18,7 @@ vi.mock('./useCreateTaskMutation', () => ({
   useCreateTaskMutation: () => ({
     isSubmitting: false,
     submitMessage: null,
-    submitTask: async (task: any) => ({ ...task, taskId: 'mocked' }),
+    submitTask: async (task: TaskPayload) => ({ ...task, taskId: 'mocked' }),
   }),
 }));
 

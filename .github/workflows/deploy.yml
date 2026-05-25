@@ -1,8 +1,10 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI — Build & Test All Services"]
     branches: [develop, staging, main]
+    types: [completed]
 
 permissions:
   id-token: write
@@ -13,19 +15,22 @@ permissions:
 env:
   AWS_REGION: us-east-1
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY_PREFIX: ent-aws-capstone
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
 
 jobs:
   security:
     name: Run Security Scanning
+    if: github.event.workflow_run.conclusion == 'success'
     uses: ./.github/workflows/security-scanning.yml
     with:
-      branch: ${{ github.ref }}
+      branch: refs/heads/${{ github.event.workflow_run.head_branch }}
     secrets: inherit
 
   deploy-dev:
     name: Deploy to Dev
     needs: security
-    if: github.ref == 'refs/heads/develop'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop'
     runs-on: ubuntu-latest
 
     environment:
@@ -35,6 +40,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -60,11 +67,14 @@ jobs:
             --namespace dev \
             --create-namespace \
             --values helm/microservices/values.dev.yaml \
-            --set global.imageRegistry=${{ env.ECR_REGISTRY }} \
-            --set taskDashboard.image.tag=${{ github.sha }} \
-            --set taskGateway.image.tag=${{ github.sha }} \
-            --set taskValidator.image.tag=${{ github.sha }} \
-            --set taskEnricher.image.tag=${{ github.sha }} \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
             --wait \
             --timeout 10m
 
@@ -78,7 +88,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: security
-    if: github.ref == 'refs/heads/staging'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging'
     runs-on: ubuntu-latest
 
     environment:
@@ -88,6 +98,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -113,11 +125,14 @@ jobs:
             --namespace staging \
             --create-namespace \
             --values helm/microservices/values.staging.yaml \
-            --set global.imageRegistry=${{ env.ECR_REGISTRY }} \
-            --set taskDashboard.image.tag=${{ github.sha }} \
-            --set taskGateway.image.tag=${{ github.sha }} \
-            --set taskValidator.image.tag=${{ github.sha }} \
-            --set taskEnricher.image.tag=${{ github.sha }} \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
             --wait \
             --timeout 15m
 
@@ -131,7 +146,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     needs: security
-    if: github.ref == 'refs/heads/main'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
 
     environment:
@@ -141,6 +156,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -166,11 +183,14 @@ jobs:
             --namespace production \
             --create-namespace \
             --values helm/microservices/values.production.yaml \
-            --set global.imageRegistry=${{ env.ECR_REGISTRY }} \
-            --set taskDashboard.image.tag=${{ github.sha }} \
-            --set taskGateway.image.tag=${{ github.sha }} \
-            --set taskValidator.image.tag=${{ github.sha }} \
-            --set taskEnricher.image.tag=${{ github.sha }} \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
             --wait \
             --timeout 20m \
             --atomic

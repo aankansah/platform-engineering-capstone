@@ -65,29 +65,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: pnpm
+          cache-dependency-path: |
+            services/task-dashboard/pnpm-lock.yaml
+            services/task-gateway/pnpm-lock.yaml
 
-      - name: npm audit — task-dashboard
+      - name: pnpm audit — task-dashboard
         working-directory: services/task-dashboard
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-            npm audit --audit-level=critical
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit --audit-level critical
           else
-            echo "No package-lock.json found. Skipping npm audit."
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
           fi
 
-      - name: npm audit — task-gateway
+      - name: pnpm audit — task-gateway
         working-directory: services/task-gateway
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-            npm audit --audit-level=critical
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit --audit-level critical
           else
-            echo "No package-lock.json found. Skipping npm audit."
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
           fi
 
       - name: Setup Rust
@@ -119,36 +128,45 @@ jobs:
             p/java
             p/rust
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: pnpm
+          cache-dependency-path: |
+            services/task-dashboard/pnpm-lock.yaml
+            services/task-gateway/pnpm-lock.yaml
 
-      - name: npm audit — task-dashboard
+      - name: pnpm audit — task-dashboard
         working-directory: services/task-dashboard
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-            npm audit
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit
           else
-            echo "No package-lock.json found. Skipping npm audit."
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
           fi
 
-      - name: npm audit — task-gateway
+      - name: pnpm audit — task-gateway
         working-directory: services/task-gateway
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-            npm audit
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit
           else
-            echo "No package-lock.json found. Skipping npm audit."
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
           fi
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
           cache: maven
 
       - name: OWASP Dependency Check — task-validator
