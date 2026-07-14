@@ -5,6 +5,7 @@ RUN apt-get update \
         -o Acquire::Retries=5 \
         --fix-missing \
         cmake \
+        libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml ./
 COPY src ./src

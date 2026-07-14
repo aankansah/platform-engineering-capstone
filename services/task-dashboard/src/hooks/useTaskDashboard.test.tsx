@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-hooks';
-import { vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { TaskPayload } from '../types';
 
 // Mock the two hooks used inside useTaskDashboard
