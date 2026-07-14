@@ -1,5 +1,5 @@
-import React from 'react';
-import { renderHook, act } from '@testing-library/react-hooks';
+import React, { act } from 'react';
+import { renderHook } from '@testing-library/react-hooks/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { TaskPayload } from '../types';
 
