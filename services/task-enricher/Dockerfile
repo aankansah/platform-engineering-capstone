@@ -6,11 +6,12 @@ RUN apt-get update \
         --fix-missing \
         cmake \
     && rm -rf /var/lib/apt/lists/*
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 COPY src ./src
 
 # Build in release mode
-RUN cargo build --release --locked \
+RUN cargo generate-lockfile \
+    && cargo build --release --locked \
     && strip target/release/task-enricher
 
 FROM debian:bookworm-slim
