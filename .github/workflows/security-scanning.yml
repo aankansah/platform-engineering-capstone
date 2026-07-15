@@ -1,0 +1,301 @@
+name: Security Scanning — Tiered
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  determine-level:
+    name: Determine Scan Level
+    runs-on: ubuntu-latest
+
+    outputs:
+      level: ${{ steps.set.outputs.level }}
+      run_fast: ${{ steps.set.outputs.run_fast }}
+      run_comprehensive: ${{ steps.set.outputs.run_comprehensive }}
+      run_full: ${{ steps.set.outputs.run_full }}
+
+    steps:
+      - name: Set scan level
+        id: set
+        run: |
+          REF="${{ inputs.branch }}"
+
+          if [[ "$REF" == "refs/heads/main" ]]; then
+            echo "level=full" >> "$GITHUB_OUTPUT"
+            echo "run_fast=true" >> "$GITHUB_OUTPUT"
+            echo "run_comprehensive=true" >> "$GITHUB_OUTPUT"
+            echo "run_full=true" >> "$GITHUB_OUTPUT"
+
+          elif [[ "$REF" == "refs/heads/staging" ]]; then
+            echo "level=comprehensive" >> "$GITHUB_OUTPUT"
+            echo "run_fast=true" >> "$GITHUB_OUTPUT"
+            echo "run_comprehensive=true" >> "$GITHUB_OUTPUT"
+            echo "run_full=false" >> "$GITHUB_OUTPUT"
+
+          else
+            echo "level=fast" >> "$GITHUB_OUTPUT"
+            echo "run_fast=true" >> "$GITHUB_OUTPUT"
+            echo "run_comprehensive=false" >> "$GITHUB_OUTPUT"
+            echo "run_full=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  fast-scans:
+    name: Fast Security Scans
+    needs: determine-level
+    if: needs.determine-level.outputs.run_fast == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scanning with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: |
+            services/task-dashboard/pnpm-lock.yaml
+            services/task-gateway/pnpm-lock.yaml
+
+      - name: pnpm audit — task-dashboard
+        working-directory: services/task-dashboard
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit --audit-level critical
+          else
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+          fi
+
+      - name: pnpm audit — task-gateway
+        working-directory: services/task-gateway
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit --audit-level critical
+          else
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+          fi
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust audit — task-enricher
+        working-directory: services/task-enricher
+        run: |
+          cargo install cargo-audit
+          cargo audit
+
+  comprehensive-scans:
+    name: Comprehensive Security Scans
+    needs: determine-level
+    if: needs.determine-level.outputs.run_comprehensive == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: SAST with Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/nodejs
+            p/java
+            p/rust
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: |
+            services/task-dashboard/pnpm-lock.yaml
+            services/task-gateway/pnpm-lock.yaml
+
+      - name: pnpm audit — task-dashboard
+        working-directory: services/task-dashboard
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit
+          else
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+          fi
+
+      - name: pnpm audit — task-gateway
+        working-directory: services/task-gateway
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            pnpm audit
+          else
+            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: OWASP Dependency Check — task-validator
+        working-directory: services/task-validator
+        run: |
+          mvn org.owasp:dependency-check-maven:check
+
+      - name: Terraform IaC scanning with Checkov
+        run: |
+          pip install checkov
+          checkov -d terraform/ \
+            --output cli \
+            --output junitxml \
+            --output-file-path . \
+            --soft-fail
+
+      - name: Terraform IaC scanning with tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform
+          soft_fail: true
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-scan-results
+          path: |
+            services/task-validator/target/dependency-check-report.html
+            results_junitxml.xml
+          if-no-files-found: ignore
+
+  full-scans:
+    name: Full Security Scans
+    needs: determine-level
+    if: needs.determine-level.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build task-dashboard image
+        run: docker build -t task-dashboard-scan:${{ github.sha }} services/task-dashboard
+
+      - name: Scan task-dashboard image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-dashboard-scan:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Build task-gateway image
+        run: docker build -t task-gateway-scan:${{ github.sha }} services/task-gateway
+
+      - name: Scan task-gateway image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-gateway-scan:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Build task-validator image
+        run: docker build -t task-validator-scan:${{ github.sha }} services/task-validator
+
+      - name: Scan task-validator image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-validator-scan:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Build task-enricher image
+        run: docker build -t task-enricher-scan:${{ github.sha }} services/task-enricher
+
+      - name: Scan task-enricher image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-enricher-scan:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Generate security audit report
+        run: |
+          echo "# Security Audit Report" > security-report.md
+          echo "" >> security-report.md
+          echo "**Date:** $(date)" >> security-report.md
+          echo "**Commit:** ${{ github.sha }}" >> security-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
+          echo "**Status:** All scans passed ✅" >> security-report.md
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-security-report-${{ github.sha }}
+          path: security-report.md
+          retention-days: 90
+
+  scan-summary:
+    name: Security Scan Summary
+    needs:
+      - determine-level
+      - fast-scans
+      - comprehensive-scans
+      - full-scans
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report security scan results
+        run: |
+          echo "Scan level:      ${{ needs.determine-level.outputs.level }}"
+          echo "Fast scans:      ${{ needs.fast-scans.result }}"
+          echo "Comprehensive:   ${{ needs.comprehensive-scans.result }}"
+          echo "Full scans:      ${{ needs.full-scans.result }}"
+
+          if [[ "${{ needs.fast-scans.result }}" == "failure" ]]; then
+            echo "❌ Critical security issues found in fast scans."
+            exit 1
+          fi
+
+          if [[ "${{ needs.comprehensive-scans.result }}" == "failure" ]]; then
+            echo "❌ Security issues found in comprehensive scans."
+            exit 1
+          fi
+
+          if [[ "${{ needs.full-scans.result }}" == "failure" ]]; then
+            echo "❌ Security issues found in full scans."
+            exit 1
+          fi
+
+          echo "✅ Security scanning completed."

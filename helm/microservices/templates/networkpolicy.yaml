@@ -1,0 +1,308 @@
+{{- if .Values.networkPolicies.enabled }}
+---
+# Default deny all ingress and egress in the namespace.
+# This is the baseline for least-privilege networking: every allowed path below
+# must be declared explicitly, which makes service dependencies visible.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ .Release.Namespace }}
+spec:
+  # Empty podSelector means "all pods in this namespace."
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Allow Task Dashboard to receive external traffic and call Task Gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-dashboard-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  # This policy applies only to pods with app=task-dashboard.
+  podSelector:
+    matchLabels:
+      app: task-dashboard
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow ingress controller traffic to reach nginx in the dashboard container.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+
+  egress:
+    # Allow the frontend nginx proxy to call the API gateway service.
+    - to:
+        - podSelector:
+            matchLabels:
+              app: task-gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+
+    # DNS is required for service-name lookups such as task-gateway.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow outbound HTTPS for platform integrations. Depending on the CNI,
+    # image pulls may not be governed by pod NetworkPolicies, but keeping this
+    # explicit is useful for workloads that call external HTTPS APIs.
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Allow Task Gateway to receive dashboard traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-gateway-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: task-gateway
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Only the dashboard should call the public API surface in this namespace.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: task-dashboard
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow publishing tasks to the internal Kafka bootstrap listener.
+    - to:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+      ports:
+        - protocol: TCP
+          port: 9092
+
+    # Allow outbound HTTPS (ECR, AWS APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Allow Task Validator platform egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-validator-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: task-validator
+
+  policyTypes:
+    # Validator consumes and publishes through Kafka, so it does not need direct
+    # ingress from other app pods in this chart.
+    - Egress
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow consuming from and publishing to the internal Kafka bootstrap listener.
+    - to:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+      ports:
+        - protocol: TCP
+          port: 9092
+
+    # Allow outbound HTTPS (ECR, AWS APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Allow Task Enricher platform egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: task-enricher-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: task-enricher
+
+  policyTypes:
+    # Enricher is event-driven through Kafka. Keep it egress-only unless you add
+    # a user-facing or service-facing HTTP path.
+    - Egress
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow consuming from and publishing to the internal Kafka bootstrap listener.
+    - to:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+      ports:
+        - protocol: TCP
+          port: 9092
+
+    # Allow outbound HTTPS (ECR, AWS APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# Allow Kafka client traffic and Strimzi-managed Kafka internal communication.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-internal-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      strimzi.io/cluster: {{ .Values.kafka.name }}
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Application workloads connect to the internal plaintext Kafka listener.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: task-gateway
+        - podSelector:
+            matchLabels:
+              app: task-validator
+        - podSelector:
+            matchLabels:
+              app: task-enricher
+        - podSelector:
+            matchLabels:
+              app: kafka-ui
+      ports:
+        - protocol: TCP
+          port: 9092
+
+    # Strimzi Kafka pods and operators in the same cluster need internal traffic
+    # for broker, controller, and operator coordination.
+    - from:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+
+  egress:
+    # Allow Strimzi-managed Kafka components to communicate with each other.
+    - to:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+
+    # DNS is needed by Strimzi-managed components for Kubernetes service lookups.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# Allow Kafka UI to resolve and connect to the internal Kafka bootstrap service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-ui-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kafka-ui
+
+  policyTypes:
+    - Egress
+
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    - to:
+        - podSelector:
+            matchLabels:
+              strimzi.io/cluster: {{ .Values.kafka.name }}
+      ports:
+        - protocol: TCP
+          port: 9092
+{{- end }}

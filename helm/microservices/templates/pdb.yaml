@@ -1,0 +1,30 @@
+{{/*
+  PodDisruptionBudgets protect availability during voluntary disruptions such
+  as node drains, cluster upgrades, or autoscaler consolidation.
+*/}}
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- $services := dict
+  "task-dashboard" .Values.taskDashboard
+  "task-enricher" .Values.taskEnricher
+  "task-gateway" .Values.taskGateway
+  "task-validator" .Values.taskValidator
+-}}
+
+{{- range $name, $config := $services }}
+{{- if $config.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}-pdb
+spec:
+  # Require at least two pods to stay available during voluntary disruption.
+  # This only makes sense for services that run at least two replicas.
+  minAvailable: 2 # Always keep at least 2 pods during node drain
+  selector:
+    matchLabels:
+      # The PDB selector must match the pods created by the Deployment.
+      app: {{ $name }}
+{{- end }}
+{{- end }}
+{{- end }}

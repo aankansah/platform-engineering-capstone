@@ -1,0 +1,209 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI — Build & Test All Services"]
+    branches: [develop, staging, main]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY_PREFIX: ent-aws-capstone
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  security:
+    name: Run Security Scanning
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: ./.github/workflows/security-scanning.yml
+    with:
+      branch: refs/heads/${{ github.event.workflow_run.head_branch }}
+    secrets: inherit
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: security
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: dev
+      url: http://dev.yourapp.example.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ent-aws-capstone-dev \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to dev via Helm
+        run: |
+          helm upgrade --install microservices-dev helm/microservices \
+            --namespace dev \
+            --create-namespace \
+            --values helm/microservices/values.dev.yaml \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
+            --wait \
+            --timeout 10m
+
+      - name: Verify dev rollout
+        run: |
+          kubectl rollout status deployment/task-dashboard -n dev --timeout=5m
+          kubectl rollout status deployment/task-gateway -n dev --timeout=5m
+          kubectl rollout status deployment/task-validator -n dev --timeout=5m
+          kubectl rollout status deployment/task-enricher -n dev --timeout=5m
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: security
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: staging
+      url: http://staging.yourapp.example.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ent-aws-capstone-staging \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to staging via Helm
+        run: |
+          helm upgrade --install microservices-staging helm/microservices \
+            --namespace staging \
+            --create-namespace \
+            --values helm/microservices/values.staging.yaml \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
+            --wait \
+            --timeout 15m
+
+      - name: Verify staging rollout
+        run: |
+          kubectl rollout status deployment/task-dashboard -n staging --timeout=5m
+          kubectl rollout status deployment/task-gateway -n staging --timeout=5m
+          kubectl rollout status deployment/task-validator -n staging --timeout=5m
+          kubectl rollout status deployment/task-enricher -n staging --timeout=5m
+
+  deploy-production:
+    name: Deploy to Production
+    needs: security
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+      url: https://yourapp.example.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ent-aws-capstone-production \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to production via Helm
+        run: |
+          helm upgrade --install microservices-production helm/microservices \
+            --namespace production \
+            --create-namespace \
+            --values helm/microservices/values.production.yaml \
+            --set taskDashboard.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-dashboard \
+            --set taskDashboard.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskGateway.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-gateway \
+            --set taskGateway.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskValidator.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-validator \
+            --set taskValidator.image.tag=${{ env.IMAGE_TAG }} \
+            --set taskEnricher.image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_PREFIX }}/task-enricher \
+            --set taskEnricher.image.tag=${{ env.IMAGE_TAG }} \
+            --wait \
+            --timeout 20m \
+            --atomic
+
+      - name: Verify production rollout
+        run: |
+          kubectl rollout status deployment/task-dashboard -n production --timeout=5m
+          kubectl rollout status deployment/task-gateway -n production --timeout=5m
+          kubectl rollout status deployment/task-validator -n production --timeout=5m
+          kubectl rollout status deployment/task-enricher -n production --timeout=5m
+
+      - name: Run production smoke test
+        run: |
+          sleep 30
+          curl -f https://yourapp.example.com/health || exit 1
+          echo "✅ Production smoke tests passed"

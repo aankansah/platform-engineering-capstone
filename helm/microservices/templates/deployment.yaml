@@ -1,0 +1,161 @@
+{{/*
+  Build one Kubernetes Deployment per enabled application in values.yaml.
+  Keeping this as a map avoids copying the same Deployment manifest for each
+  microservice while still letting each service own its image, ports, probes,
+  resources, environment variables, and optional volumes.
+*/}}
+{{- $services := dict
+  "task-dashboard" .Values.taskDashboard
+  "task-enricher" .Values.taskEnricher
+  "task-gateway" .Values.taskGateway
+  "task-validator" .Values.taskValidator
+-}}
+
+{{/* Iterate through the service map and skip anything explicitly disabled. */}}
+{{- range $name, $config := $services }}
+{{- if $config.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    # Labels are the contract used by Services, NetworkPolicies, HPAs, and
+    # kubectl selectors. Keep these stable unless every dependent object changes.
+    app: {{ $name }}
+    environment: {{ $.Values.global.environment }}
+spec:
+  # When autoscaling is enabled, the HPA owns replica count. Setting replicas
+  # here at the same time can cause noisy drift between Helm and Kubernetes.
+  {{- if not $config.autoscaling.enabled }}
+  replicas: {{ $config.replicaCount }}
+  {{- end }}
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Allow one extra pod during rollout and keep all existing pods available.
+      # This favors availability over speed, which is usually the safer default.
+      maxSurge: 1
+      maxUnavailable: 0 # Zero downtime rolling updates
+
+  selector:
+    matchLabels:
+      # The selector must match pod template labels and is immutable after
+      # creation. Changing it usually requires replacing the Deployment.
+      app: {{ $name }}
+
+  template:
+    metadata:
+      labels:
+        # Pod labels must match the Deployment selector and Service selectors.
+        app: {{ $name }}
+        environment: {{ $.Values.global.environment }}
+      annotations:
+        # Prometheus annotations let a scraper discover metrics endpoints without
+        # separate per-service scrape configuration.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ $config.service.targetPort }}"
+
+    spec:
+      securityContext:
+        # Run pods as non-root by default. This reduces blast radius if a process
+        # is compromised, but images must support running without root privileges.
+        runAsNonRoot: true
+        runAsUser: 1000
+        # fsGroup gives the non-root process write access to mounted volumes.
+        fsGroup: 1000
+
+      containers:
+        - name: {{ $name }}
+          # Image repository and tag come from values.yaml so promotion between
+          # environments can happen through values changes, not template edits.
+          image: "{{ $config.image.repository }}:{{ $config.image.tag }}"
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+
+          ports:
+            # containerPort documents the app listener and is reused by probes
+            # and Services through the per-service targetPort value.
+            - containerPort: {{ $config.service.targetPort }}
+              protocol: TCP
+
+          securityContext:
+            # Keep privilege escalation disabled unless a workload truly needs it.
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+
+          {{- with $config.volumeMounts }}
+          # Optional per-service mounts handle runtime write paths, such as nginx
+          # cache/temp directories when the container runs as a non-root user.
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- if $config.livenessProbe }}
+          # Liveness probes tell Kubernetes when to restart a stuck process.
+          # They should be conservative so slow startup is not treated as failure.
+          livenessProbe:
+            httpGet:
+              path: {{ $config.livenessProbe.path }}
+              port: {{ $config.service.targetPort }}
+            initialDelaySeconds: {{ $config.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $config.livenessProbe.periodSeconds }}
+            failureThreshold: 3
+          {{- end }}
+
+          {{- if $config.readinessProbe }}
+          # Readiness probes control whether the pod receives traffic. Use these
+          # for dependency checks or warm-up periods without restarting the app.
+          readinessProbe:
+            httpGet:
+              path: {{ $config.readinessProbe.path }}
+              port: {{ $config.service.targetPort }}
+            initialDelaySeconds: {{ $config.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $config.readinessProbe.periodSeconds }}
+            failureThreshold: 3
+          {{- end }}
+
+          resources:
+            # Requests are used by the scheduler to place pods; limits cap usage.
+            # Good values prevent noisy-neighbor issues and improve bin packing.
+            requests:
+              memory: {{ $config.resources.requests.memory | quote }}
+              cpu: {{ $config.resources.requests.cpu | quote }}
+            limits:
+              memory: {{ $config.resources.limits.memory | quote }}
+              cpu: {{ $config.resources.limits.cpu | quote }}
+
+          env:
+            # APP_ENV gives application code a simple environment signal that
+            # matches the Helm release values.
+            - name: APP_ENV
+              value: {{ $.Values.global.environment | quote }}
+
+            # PORT keeps app configuration aligned with the Kubernetes targetPort.
+            - name: PORT
+              value: {{ $config.service.targetPort | quote }}
+
+            # Downward API values expose pod metadata without hardcoding it.
+            # They are useful for logging, metrics dimensions, and debugging.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            {{- with $config.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      {{- with $config.volumes }}
+      # Optional pod volumes pair with volumeMounts above. emptyDir is commonly
+      # used for ephemeral runtime storage that should disappear with the pod.
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

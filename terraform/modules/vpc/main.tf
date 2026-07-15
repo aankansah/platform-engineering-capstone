@@ -1,90 +1,34 @@
-# terraform/modules/github-oidc/main.tf
+data "aws_availability_zones" "available" { state = "available" }
 
-variable "github_org" {
-  description = "Your GitHub username or organization name"
-  type        = string
-}
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "6.6.1"
 
-variable "github_repo" {
-  description = "Repository name"
-  type        = string
-}
+  name = "${var.project_name}-${var.environment}-vpc"
+  cidr = var.vpc_cidr
 
-variable "allowed_branches" {
-  description = "Branches allowed to assume AWS roles"
-  type        = list(string)
-  default     = ["main", "develop", "staging"]
-}
+  azs             = slice(data.aws_availability_zones.available.names, 0, var.nat_gateway_count == 1 ? 2 : 3)
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
-variable "project_name" {
-  type    = string
-  default = "capstone"
-}
+  enable_nat_gateway   = true
+  single_nat_gateway   = var.nat_gateway_count == 1 # Dev: true (saves $32/mo)
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
-# Register GitHub as an OIDC Identity Provider in AWS
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = ["sts.amazonaws.com"]
-
-  # GitHub's OIDC thumbprint (stable — rarely changes)
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  # Required for EKS to discover subnets
+  private_subnet_tags = {
+    "kubernetes.io/role/internal-elb"                              = "1"
+    "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "shared"
+  }
+  public_subnet_tags = {
+    "kubernetes.io/role/elb"                                       = "1"
+    "kubernetes.io/cluster/${var.project_name}-${var.environment}" = "shared"
+  }
 
   tags = {
-    Name    = "GitHub Actions OIDC Provider"
-    Project = var.project_name
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
   }
-}
-
-# Local helper: build the list of allowed repo:branch subjects
-locals {
-  allowed_subjects = [
-    for branch in var.allowed_branches :
-    "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${branch}"
-  ]
-}
-
-# IAM Role that GitHub Actions workflows will assume
-resource "aws_iam_role" "github_actions" {
-  name = "${var.project_name}-github-actions-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.github.arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-        }
-        StringLike = {
-          "token.actions.githubusercontent.com:sub" = local.allowed_subjects
-        }
-      }
-    }]
-  })
-
-  tags = {
-    Purpose = "GitHub Actions CI/CD"
-    Project = var.project_name
-  }
-}
-
-# For this portfolio project, we use broad permissions.
-# In a real company you would create a least-privilege custom policy.
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-output "role_arn" {
-  value       = aws_iam_role.github_actions.arn
-  description = "Paste this ARN into GitHub Actions workflows as role-to-assume"
-}
-
-output "oidc_provider_arn" {
-  value = aws_iam_openid_connect_provider.github.arn
 }

@@ -1,10 +1,9 @@
-# terraform/bootstrap/oidc.tf
 terraform {
   required_version = ">= 1.6.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.40.0"
+      version = "6.44.0"
     }
   }
 }
@@ -15,7 +14,7 @@ provider "aws" {
 
 module "github_oidc" {
   source           = "../modules/github-oidc"
-  github_org       = "aankansah"    # ← change this
+  github_org       = "aankansah"
   github_repo      = "platform-engineering-capstone"
   allowed_branches = ["main", "develop", "staging"]
   project_name     = "capstone"
