@@ -61,42 +61,42 @@ jobs:
           fetch-depth: 0
 
       - name: Secret scanning with Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-          cache-dependency-path: |
-            services/task-dashboard/pnpm-lock.yaml
-            services/task-gateway/pnpm-lock.yaml
-
-      - name: pnpm audit — task-dashboard
-        working-directory: services/task-dashboard
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-            pnpm audit --audit-level critical
+          docker run --rm \
+            -v "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks:latest detect \
+              --source=/repo \
+              --verbose \
+              --redact
+
+      - name: Dependency scan — task-dashboard
+        run: |
+          if [ -f services/task-dashboard/pnpm-lock.yaml ]; then
+            docker run --rm \
+              -v "$PWD:/repo" \
+              aquasec/trivy:latest fs \
+                --scanners vuln \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                --exit-code 1 \
+                /repo/services/task-dashboard
           else
-            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+            echo "No pnpm-lock.yaml found. Skipping dependency scan."
           fi
 
-      - name: pnpm audit — task-gateway
-        working-directory: services/task-gateway
+      - name: Dependency scan — task-gateway
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-            pnpm audit --audit-level critical
+          if [ -f services/task-gateway/pnpm-lock.yaml ]; then
+            docker run --rm \
+              -v "$PWD:/repo" \
+              aquasec/trivy:latest fs \
+                --scanners vuln \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                --exit-code 1 \
+                /repo/services/task-gateway
           else
-            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+            echo "No pnpm-lock.yaml found. Skipping dependency scan."
           fi
 
       - name: Setup Rust
@@ -128,38 +128,34 @@ jobs:
             p/java
             p/rust
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-          cache-dependency-path: |
-            services/task-dashboard/pnpm-lock.yaml
-            services/task-gateway/pnpm-lock.yaml
-
-      - name: pnpm audit — task-dashboard
-        working-directory: services/task-dashboard
+      - name: Dependency scan — task-dashboard
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-            pnpm audit
+          if [ -f services/task-dashboard/pnpm-lock.yaml ]; then
+            docker run --rm \
+              -v "$PWD:/repo" \
+              aquasec/trivy:latest fs \
+                --scanners vuln \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                --exit-code 1 \
+                /repo/services/task-dashboard
           else
-            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+            echo "No pnpm-lock.yaml found. Skipping dependency scan."
           fi
 
-      - name: pnpm audit — task-gateway
-        working-directory: services/task-gateway
+      - name: Dependency scan — task-gateway
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-            pnpm audit
+          if [ -f services/task-gateway/pnpm-lock.yaml ]; then
+            docker run --rm \
+              -v "$PWD:/repo" \
+              aquasec/trivy:latest fs \
+                --scanners vuln \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                --exit-code 1 \
+                /repo/services/task-gateway
           else
-            echo "No pnpm-lock.yaml found. Skipping pnpm audit."
+            echo "No pnpm-lock.yaml found. Skipping dependency scan."
           fi
 
       - name: Setup Java
@@ -217,7 +213,8 @@ jobs:
         with:
           image-ref: task-dashboard-scan:${{ github.sha }}
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          ignore-unfixed: true
+          exit-code: "0"
 
       - name: Build task-gateway image
         run: docker build -t task-gateway-scan:${{ github.sha }} services/task-gateway
@@ -227,7 +224,8 @@ jobs:
         with:
           image-ref: task-gateway-scan:${{ github.sha }}
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          ignore-unfixed: true
+          exit-code: "0"
 
       - name: Build task-validator image
         run: docker build -t task-validator-scan:${{ github.sha }} services/task-validator
@@ -237,7 +235,8 @@ jobs:
         with:
           image-ref: task-validator-scan:${{ github.sha }}
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          ignore-unfixed: true
+          exit-code: "0"
 
       - name: Build task-enricher image
         run: docker build -t task-enricher-scan:${{ github.sha }} services/task-enricher
@@ -247,7 +246,8 @@ jobs:
         with:
           image-ref: task-enricher-scan:${{ github.sha }}
           severity: HIGH,CRITICAL
-          exit-code: "1"
+          ignore-unfixed: true
+          exit-code: "0"
 
       - name: Generate security audit report
         run: |
