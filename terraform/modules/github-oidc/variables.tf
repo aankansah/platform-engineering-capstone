@@ -14,6 +14,12 @@ variable "allowed_branches" {
   default     = ["main", "develop", "staging"]
 }
 
+variable "allowed_environments" {
+  description = "GitHub Environments allowed to assume AWS roles"
+  type        = list(string)
+  default     = ["dev", "staging", "production"]
+}
+
 variable "project_name" {
   type    = string
   default = "capstone"
