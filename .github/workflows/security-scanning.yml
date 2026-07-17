@@ -158,17 +158,20 @@ jobs:
             echo "No pnpm-lock.yaml found. Skipping dependency scan."
           fi
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: OWASP Dependency Check — task-validator
-        working-directory: services/task-validator
+      - name: Dependency scan — task-validator
         run: |
-          mvn org.owasp:dependency-check-maven:check
+          if [ -f services/task-validator/pom.xml ]; then
+            docker run --rm \
+              -v "$PWD:/repo" \
+              aquasec/trivy:latest fs \
+                --scanners vuln \
+                --severity CRITICAL \
+                --ignore-unfixed \
+                --exit-code 1 \
+                /repo/services/task-validator
+          else
+            echo "No pom.xml found. Skipping dependency scan."
+          fi
 
       - name: Terraform IaC scanning with Checkov
         run: |
@@ -191,7 +194,6 @@ jobs:
         with:
           name: comprehensive-scan-results
           path: |
-            services/task-validator/target/dependency-check-report.html
             results_junitxml.xml
           if-no-files-found: ignore
 
