@@ -2,6 +2,9 @@ global:
   environment: dev
   imagePullPolicy: IfNotPresent
 
+imagePullSecrets:
+  - name: ecr-registry-secret
+
 taskDashboard:
   enabled: true
   replicaCount: 1
@@ -9,6 +12,7 @@ taskDashboard:
   image:
     repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-dashboard
     tag: latest
+    imagePullPolicy: Always
 
   service:
     type: ClusterIP
@@ -57,6 +61,21 @@ taskGateway:
   image:
     repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-gateway
     tag: latest
+    imagePullPolicy: Always
+
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: KAFKA_CLIENT_ID
+      value: task-gateway
+    - name: KAFKA_GROUP_ID
+      value: task-gateway-group
+    - name: TOPIC_TASKS
+      value: tasks
+    - name: TOPIC_EVENTS
+      value: task-events
+    - name: TOPIC_TASK_EVENTS
+      value: task-events
 
   service:
     type: ClusterIP
@@ -89,6 +108,15 @@ taskValidator:
   image:
     repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-validator
     tag: latest
+    imagePullPolicy: Always
+
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: APPLICATION_TOPICS_EVENTS
+      value: task-events
+    - name: SERVER_PORT
+      value: "8080"
 
   service:
     type: ClusterIP
@@ -126,6 +154,17 @@ taskEnricher:
   image:
     repository: 912951360942.dkr.ecr.us-east-1.amazonaws.com/ent-aws-capstone/task-enricher
     tag: latest
+    imagePullPolicy: Always
+
+  env:
+    - name: KAFKA_BROKERS
+      value: ent-kafka-kafka-bootstrap:9092
+    - name: TOPIC_TASKS
+      value: tasks
+    - name: TOPIC_TASK_EVENTS
+      value: task-events
+    - name: LISTEN_ADDR
+      value: 0.0.0.0:8080
 
   service:
     type: ClusterIP
@@ -156,8 +195,23 @@ taskEnricher:
     initialDelaySeconds: 10
     periodSeconds: 10
 
-networkPolicies:
+kafka:
   enabled: true
+  name: ent-kafka
+  # No image needed because Strimzi chooses the Kafka image from the strimzi operator installed based on the version number passed
+  version: 4.3.0
+  replicas: 1
+  storage:
+    type: ephemeral
+
+kafkaUi:
+  enabled: true
+  image: provectuslabs/kafka-ui:latest
+  service:
+    port: 8080
+
+networkPolicies:
+  enabled: false
 
 podDisruptionBudget:
   enabled: false
