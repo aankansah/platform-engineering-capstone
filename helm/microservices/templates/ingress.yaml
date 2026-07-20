@@ -1,0 +1,33 @@
+{{- if .Values.ingress.enabled }}
+{{- range $name, $config := .Values.ingress.hosts }}
+{{- if $config.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name | kebabcase }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $name | kebabcase }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+  {{- with $.Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className | quote }}
+  rules:
+    - host: {{ $config.host | quote }}
+      http:
+        paths:
+          - path: {{ $config.path | default "/" | quote }}
+            pathType: {{ $config.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $config.service.name | quote }}
+                port:
+                  number: {{ $config.service.port }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -58,6 +58,11 @@ spec:
         prometheus.io/port: "{{ $config.service.targetPort }}"
 
     spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       securityContext:
         # Run pods as non-root by default. This reduces blast radius if a process
         # is compromised, but images must support running without root privileges.

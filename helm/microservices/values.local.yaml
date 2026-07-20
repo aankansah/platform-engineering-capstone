@@ -205,7 +205,7 @@ taskEnricher:
 kafka:
   enabled: true
   name: ent-kafka
-  version: 4.1.2
+  version: 4.3.0
   replicas: 1
   storage:
     type: ephemeral
@@ -215,6 +215,36 @@ kafkaUi:
   image: provectuslabs/kafka-ui:latest
   service:
     port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    dashboard:
+      enabled: true
+      host: taskflow.local
+      path: /
+      pathType: Prefix
+      service:
+        name: task-dashboard
+        port: 3000
+    gateway:
+      enabled: true
+      host: api.taskflow.local
+      path: /
+      pathType: Prefix
+      service:
+        name: task-gateway
+        port: 8080
+    kafkaUi:
+      enabled: true
+      host: kafka-ui.taskflow.local
+      path: /
+      pathType: Prefix
+      service:
+        name: kafka-ui
+        port: 8080
 
 networkPolicies:
   # Local Kind clusters often do not enforce NetworkPolicy unless a supporting

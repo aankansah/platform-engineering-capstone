@@ -12,12 +12,21 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
-# List of allowed repo:branch subjects
+# List of allowed GitHub OIDC subjects.
+# Jobs without a GitHub Environment use the branch subject format.
+# Jobs with `environment:` use the environment subject format instead.
 locals {
-  allowed_subjects = [
+  allowed_branch_subjects = [
     for branch in var.allowed_branches :
     "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${branch}"
   ]
+
+  allowed_environment_subjects = [
+    for environment in var.allowed_environments :
+    "repo:${var.github_org}/${var.github_repo}:environment:${environment}"
+  ]
+
+  allowed_subjects = concat(local.allowed_branch_subjects, local.allowed_environment_subjects)
 }
 
 # IAM Role that GitHub Actions workflows will assume
